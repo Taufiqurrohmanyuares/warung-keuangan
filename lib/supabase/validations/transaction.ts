@@ -1,0 +1,11 @@
+import { z } from 'zod'
+
+export const transactionSchema = z.object({
+  type: z.enum(['income', 'expense']),
+  amount: z.coerce.number().min(1, 'Nominal wajib diisi dan harus lebih dari 0'),
+  category_id: z.string().optional(),
+  note: z.string().optional(),
+  occurred_at: z.string().min(1, 'Tanggal wajib diisi'),
+})
+
+export type TransactionFormValues = z.infer<typeof transactionSchema>
