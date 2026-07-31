@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-gray-50 text-gray-900;
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Memastikan angka keuangan rata kanan / mudah dibaca selayaknya aplikasi kasir */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+  #receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 300px; /* lebar ala struk thermal 80mm */
+  }
 }

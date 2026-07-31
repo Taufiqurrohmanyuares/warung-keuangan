@@ -1,8 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+function getMonthRange(monthParam: string | null) {
+  // monthParam format: "2026-07". Kalau tidak ada, pakai bulan berjalan.
+  const now = new Date()
+  const [year, month] = monthParam
+    ? monthParam.split('-').map(Number)
+    : [now.getFullYear(), now.getMonth() + 1]
+
+  const from = new Date(year, month - 1, 1).toISOString().slice(0, 10)
+  const to = new Date(year, month, 0).toISOString().slice(0, 10) // hari terakhir bulan itu
+
+  return { from, to }
+}
+
+export async function GET(request: NextRequest) {
   try {
+    // PERBAIKAN: Tambahkan 'await' di sini karena createClient di server (App Router) bersifat asynchronous
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -10,20 +24,26 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 1. Ambil semua transaksi user
+    const { searchParams } = new URL(request.url)
+    const monthParam = searchParams.get('month') // format "2026-07"
+    const { from, to } = getMonthRange(monthParam)
+
+    // 1. Ambil transaksi HANYA di bulan yang dipilih
     const { data: transactions } = await supabase
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
+      .gte('occurred_at', from)
+      .lte('occurred_at', to)
+      .order('occurred_at', { ascending: false })
 
-    // 2. Ambil semua kasbon user yang belum lunas (status != 'paid')
+    // 2. Piutang kasbon = snapshot utang aktif SAAT INI (bukan per bulan, karena kasbon adalah status berjalan)
     const { data: debts } = await supabase
       .from('debts')
       .select('*')
       .eq('user_id', user.id)
       .neq('status', 'paid')
 
-    // 3. Hitung Total Pemasukan & Pengeluaran
     let totalIncome = 0
     let totalExpense = 0
 
@@ -33,7 +53,6 @@ export async function GET() {
       else if (t.type === 'expense') totalExpense += amount
     })
 
-    // 4. Hitung Total Sisa Kasbon yang belum dibayar
     let totalDebtRemaining = 0
     debts?.forEach((d) => {
       const remaining = Number(d.amount || 0) - Number(d.paid_amount || 0)
@@ -47,7 +66,8 @@ export async function GET() {
       totalExpense,
       netProfit,
       totalDebtRemaining,
-      recentTransactions: transactions?.slice(0, 5) || [], // 5 transaksi terakhir untuk grafik/tabel ringkas
+      recentTransactions: transactions?.slice(0, 5) || [],
+      month: monthParam || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
     })
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
