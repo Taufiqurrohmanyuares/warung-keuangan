@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import DashboardShell from '@/components/DashboardShell'
 import { createClient } from '@/lib/supabase/client'
+import { monthRangeStr, todayWIB } from '@/lib/supabase/date'
 import { Field, ToggleRow, ActionButton, SettingsLayout } from '@/components/profile/shared'
 import {
   Bell, BellOff, Save, Palette, Banknote, DatabaseBackup,
@@ -72,8 +73,8 @@ export default function PengaturanPage() {
   async function handleExportExcel() {
     try {
       const now = new Date()
-      const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-      const toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+      const [y, m] = todayWIB().slice(0, 7).split('-').map(Number)
+const { from: fromDate, to: toDate } = monthRangeStr(y, m)
       
       const res = await fetch(`/api/transactions/export-excel?from=${fromDate}&to=${toDate}`)
       if (!res.ok) throw new Error('Gagal')

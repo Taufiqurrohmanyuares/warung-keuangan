@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { todayWIB } from '@/lib/date'
 
 // GET /api/transactions?from=2026-07-01&to=2026-07-31
 export async function GET(request: NextRequest) {
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('transactions')
     .select('*, categories(name)')
+    .eq('user_id', user.id)
     .order('occurred_at', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
       amount: body.amount,
       category_id: body.category_id ?? null,
       note: body.note ?? null,
-      occurred_at: body.occurred_at ?? new Date().toISOString().slice(0, 10),
+      occurred_at: body.occurred_at ?? todayWIB(),
     })
     .select()
     .single()

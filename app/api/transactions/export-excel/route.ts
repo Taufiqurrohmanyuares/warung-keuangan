@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import ExcelJS from 'exceljs'
+import { todayWIB } from '@/lib/supabase/date'
+
 
 export async function GET(request: NextRequest) {
   // PERBAIKAN: Tambahkan 'await' di sini karena createClient di server (App Router) bersifat asynchronous
@@ -20,6 +22,7 @@ export async function GET(request: NextRequest) {
     .from('transactions')
     .select('*, categories(name)')
     .eq('user_id', user.id)
+    .eq('is_voided', false)
     .order('occurred_at', { ascending: true })
 
   if (from) query = query.gte('occurred_at', from)
@@ -105,7 +108,7 @@ export async function GET(request: NextRequest) {
 
   const buffer = await workbook.xlsx.writeBuffer()
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayWIB()
 
   return new NextResponse(buffer as ArrayBuffer, {
     status: 200,

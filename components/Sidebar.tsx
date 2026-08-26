@@ -7,12 +7,13 @@ import { createClient } from '@/lib/supabase/client'
 import { LOW_STOCK_THRESHOLD } from '@/lib/supabase/constants'
 import {
   LayoutDashboard, ReceiptText, LogOut, Store, BookUser,
-  Tags, Package, User, Menu, X, ShoppingCart, Bell, AlertTriangle,
+  Tags, Package, User, Menu, X, ShoppingCart, Bell, AlertTriangle, Lock,
 } from 'lucide-react'
 
 const MENU_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/kasir', label: 'Kasir', icon: ShoppingCart },
+  { href: '/tutup-kasir', label: 'Tutup Kasir', icon: Lock },
   { href: '/transactions', label: 'Transaksi', icon: ReceiptText },
   { href: '/debts', label: 'Kasbon', icon: BookUser },
   { href: '/categories', label: 'Kategori', icon: Tags },

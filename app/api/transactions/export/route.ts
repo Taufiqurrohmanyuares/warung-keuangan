@@ -8,6 +8,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('transactions')
     .select('id, type, amount, note, occurred_at, categories(name)')
+    .eq('is_voided', false)
     .order('occurred_at', { ascending: false })
 
   if (error) {

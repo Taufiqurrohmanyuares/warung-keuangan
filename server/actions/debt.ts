@@ -32,9 +32,9 @@ export async function createDebt(formData: any) {
   } catch (error: any) {
     return { error: error.message || 'Terjadi kesalahan pada server' }
   }
-} // <-- Perbaikan: Kurung kurawal penutup createDebt diletakkan di sini
+}
 
-// Fungsi bayar cicilan sekarang berdiri sendiri
+// Fungsi bayar cicilan — atomik lewat RPC: update kasbon + catat transaksi pemasukan sekaligus.
 export async function payDebt(debtId: string, paymentAmount: number) {
   try {
     const supabase = await createClient()
@@ -42,40 +42,17 @@ export async function payDebt(debtId: string, paymentAmount: number) {
 
     if (!user) return { error: 'Sesi habis, silakan login ulang.' }
 
-    // 1. Ambil data kasbon saat ini
-    const { data: currentDebt, error: fetchError } = await supabase
-      .from('debts')
-      .select('*')
-      .eq('id', debtId)
-      .single()
+    const { error } = await supabase.rpc('pay_debt', {
+      p_user_id: user.id,
+      p_debt_id: debtId,
+      p_amount: paymentAmount,
+    })
 
-    if (fetchError) throw new Error('Gagal mengambil data kasbon')
-
-    // 2. Hitung total yang sudah dibayar
-    const totalAmount = Number(currentDebt.amount)
-    const newPaidAmount = Number(currentDebt.paid_amount || 0) + Number(paymentAmount)
-    
-    // 3. Tentukan status baru (apakah sudah lunas atau masih nyicil)
-    let finalPaidAmount = newPaidAmount
-    let newStatus = 'partial'
-
-    if (newPaidAmount >= totalAmount) {
-      finalPaidAmount = totalAmount // Mencegah kelebihan bayar
-      newStatus = 'paid'
-    }
-
-    // 4. Simpan pembaruan ke database
-    const { error: updateError } = await supabase
-      .from('debts')
-      .update({
-        paid_amount: finalPaidAmount,
-        status: newStatus
-      })
-      .eq('id', debtId)
-
-    if (updateError) throw new Error(updateError.message)
+    if (error) throw new Error(error.message)
 
     revalidatePath('/debts')
+    revalidatePath('/transactions')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (error: any) {
     return { error: error.message || 'Terjadi kesalahan pada server' }

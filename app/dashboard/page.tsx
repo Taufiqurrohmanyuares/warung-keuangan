@@ -6,6 +6,7 @@ import {
   Wallet, TrendingUp, TrendingDown, AlertCircle, 
   ArrowUpRight, ArrowDownLeft, Calendar, Download, Loader2
 } from 'lucide-react'
+import { monthRangeStr } from '@/lib/date'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 type DashboardData = {
@@ -70,8 +71,7 @@ export default function DashboardPage() {
     try {
       // 1. Ubah format "YYYY-MM" menjadi rentang tanggal (from & to)
       const [year, month] = selectedMonth.split('-').map(Number)
-      const fromDate = new Date(year, month - 1, 1).toISOString().slice(0, 10) // Hari pertama bulan
-      const toDate = new Date(year, month, 0).toISOString().slice(0, 10)       // Hari terakhir bulan
+      const { from: fromDate, to: toDate } = monthRangeStr(year, month)     // Hari terakhir bulan
 
       // 2. Arahkan ke endpoint Excel yang benar beserta parameternya
       const res = await fetch(`/api/transactions/export-excel?from=${fromDate}&to=${toDate}`)

@@ -4,8 +4,9 @@ import { useEffect, useState, useTransition, useMemo } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import DashboardShell from '@/components/DashboardShell'
+import { todayWIB } from '@/lib/date'
 import { Stempel, useStempel } from '@/components/Stempel'
-import { Plus, Minus, Trash2, Wallet, Tag, AlignLeft, Download, Search, ShoppingCart } from 'lucide-react'
+import { Plus, Minus, Trash2, Wallet, Tag, AlignLeft, Download, Search, ShoppingCart, Ban } from 'lucide-react'
 
 import { transactionSchema, TransactionFormValues } from '@/lib/supabase/validations/transaction'
 import { createTransaction } from '@/server/actions/transaction'
@@ -18,6 +19,8 @@ type Transaction = {
   note: string | null
   occurred_at: string
   source: 'manual' | 'kasir' | null
+  is_voided?: boolean
+  void_reason?: string | null
   categories: { name: string } | null
 }
 
@@ -50,6 +53,7 @@ export default function TransactionsPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [voidingId, setVoidingId] = useState<string | null>(null)
   const stempel = useStempel()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -118,7 +122,7 @@ export default function TransactionsPage() {
         amount: 0,
         category_id: '',
         note: '',
-        occurred_at: new Date().toISOString().slice(0, 10),
+        occurred_at: todayWIB(), 
       })
       await loadData()
     })
@@ -138,6 +142,32 @@ export default function TransactionsPage() {
     }
   }
 
+  // Khusus transaksi dari Kasir: dibatalkan (bukan dihapus permanen), stok otomatis dibalikin.
+  async function handleVoid(id: string) {
+    if (voidingId) return
+    if (!confirm('Batalkan transaksi ini? Stok barang yang terjual akan otomatis dikembalikan.')) return
+
+    const reason = prompt('Catatan kenapa dibatalkan (opsional):') || undefined
+
+    setVoidingId(id)
+    try {
+      const res = await fetch(`/api/transactions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      if (res.ok) {
+        stempel.show('Dibatalkan')
+        await loadData()
+      } else {
+        const result = await res.json().catch(() => null)
+        alert(result?.error || 'Gagal membatalkan transaksi')
+      }
+    } finally {
+      setVoidingId(null)
+    }
+  }
+
   const displayedTransactions = transactions.filter((t) => {
     const matchesType = filterType === 'all' || t.type === filterType
     const noteText = t.note ? t.note.toLowerCase() : ''
@@ -147,8 +177,9 @@ export default function TransactionsPage() {
   })
 
   const filteredSummary = useMemo(() => {
-    const income = displayedTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
-    const expense = displayedTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+    const active = displayedTransactions.filter((t) => !t.is_voided)
+    const income = active.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+    const expense = active.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
     return { income, expense }
   }, [displayedTransactions])
 
@@ -163,7 +194,9 @@ export default function TransactionsPage() {
         groups.push(group)
       }
       group.items.push(t)
-      group.net += t.type === 'income' ? Number(t.amount) : -Number(t.amount)
+      if (!t.is_voided) {
+        group.net += t.type === 'income' ? Number(t.amount) : -Number(t.amount)
+      }
     }
 
     return groups
@@ -355,18 +388,20 @@ export default function TransactionsPage() {
                     <div className="space-y-3">
                       {group.items.map((t) => {
                         const isDeleting = deletingId === t.id
+                        const isVoiding = voidingId === t.id
+                        const isVoided = !!t.is_voided
                         return (
                           <div
                             key={t.id}
-                            className={`group bg-white rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-all ${isDeleting ? 'opacity-50' : ''}`}
+                            className={`group bg-white rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-all ${(isDeleting || isVoiding) ? 'opacity-50' : ''} ${isVoided ? 'opacity-60' : ''}`}
                           >
                             <div className="flex items-center gap-4">
-                              <div className={`p-3 rounded-xl ${t.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                              <div className={`p-3 rounded-xl ${isVoided ? 'bg-lavender/60 text-muted' : t.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
                                 {t.type === 'income' ? <Plus className="w-5 h-5" /> : <Minus className="w-5 h-5" />}
                               </div>
                               <div>
-                                <div className="flex items-center gap-1.5">
-                                  <p className="text-sm font-bold text-ink">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className={`text-sm font-bold text-ink ${isVoided ? 'line-through' : ''}`}>
                                     {t.categories?.name ?? (t.type === 'income' ? 'Pemasukan' : 'Pengeluaran')}
                                   </p>
                                   {t.source === 'kasir' && (
@@ -374,25 +409,44 @@ export default function TransactionsPage() {
                                       <ShoppingCart className="w-2.5 h-2.5" /> Kasir
                                     </span>
                                   )}
+                                  {isVoided && (
+                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold rounded-md shrink-0">
+                                      <Ban className="w-2.5 h-2.5" /> Dibatalkan
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-muted mt-0.5">
                                   {formatDate(t.occurred_at)}{t.note ? ` · ${t.note}` : ''}
+                                  {isVoided && t.void_reason ? ` · ${t.void_reason}` : ''}
                                 </p>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-4">
-                              <p className={`text-base font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                              <p className={`text-base font-bold ${isVoided ? 'text-muted line-through' : t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                                 {t.type === 'income' ? '+' : '-'}{formatRupiah(Number(t.amount))}
                               </p>
-                              <button
-                                onClick={() => handleDelete(t.id)}
-                                disabled={isDeleting}
-                                className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
-                                title="Hapus Transaksi"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {!isVoided && (
+                                t.source === 'kasir' ? (
+                                  <button
+                                    onClick={() => handleVoid(t.id)}
+                                    disabled={isVoiding}
+                                    className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                    title="Batalkan Transaksi (stok dikembalikan)"
+                                  >
+                                    <Ban className="w-4 h-4" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleDelete(t.id)}
+                                    disabled={isDeleting}
+                                    className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                    title="Hapus Transaksi"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )
+                              )}
                             </div>
                           </div>
                         )

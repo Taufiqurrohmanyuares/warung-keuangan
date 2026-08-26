@@ -5,7 +5,7 @@ import DashboardShell from '@/components/DashboardShell'
 import { Stempel, useStempel } from '@/components/Stempel'
 import {
   Package, Trash2, PlusCircle, MinusCircle, Search, ChevronLeft, ChevronRight,
-  SlidersHorizontal, Boxes, AlertTriangle, Wallet, PackagePlus,
+  SlidersHorizontal, Boxes, AlertTriangle, Wallet, PackagePlus, Barcode, Pencil, Check, X,
 } from 'lucide-react'
 import { LOW_STOCK_THRESHOLD } from '@/lib/supabase/constants'
 
@@ -15,6 +15,8 @@ type Product = {
   stock: number
   unit: string
   price: number
+  cost_price?: number | null
+  barcode?: string | null
 }
 
 const COMMON_UNITS = ['pcs', 'dus', 'renceng', 'bungkus', 'botol', 'kg', 'gram', 'liter', 'sachet']
@@ -37,6 +39,14 @@ export default function ProductsPage() {
   const [stock, setStock] = useState('')
   const [unit, setUnit] = useState('pcs')
   const [price, setPrice] = useState('')
+  const [costPrice, setCostPrice] = useState('')
+  const [barcode, setBarcode] = useState('')
+  const [editingBarcodeId, setEditingBarcodeId] = useState<string | null>(null)
+  const [editingBarcodeValue, setEditingBarcodeValue] = useState('')
+  const [savingBarcode, setSavingBarcode] = useState(false)
+  const [editingCostPriceId, setEditingCostPriceId] = useState<string | null>(null)
+  const [editingCostPriceValue, setEditingCostPriceValue] = useState('')
+  const [savingCostPrice, setSavingCostPrice] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('newest')
@@ -101,17 +111,67 @@ export default function ProductsPage() {
           stock: Number(stock) || 0,
           unit,
           price: Number(price) || 0,
+          cost_price: Number(costPrice) || 0,
+          barcode: barcode.trim() || null,
         }),
       })
 
       if (res.ok) {
-        setName(''); setStock(''); setPrice(''); setUnit('pcs')
+        setName(''); setStock(''); setPrice(''); setCostPrice(''); setUnit('pcs'); setBarcode('')
         stempel.show('Ditambahkan')
         await fetchProducts()
       } else {
-        alert('Gagal menambah produk')
+        const result = await res.json().catch(() => null)
+        alert(result?.error || 'Gagal menambah produk')
       }
     })
+  }
+
+  async function handleSaveBarcode(id: string) {
+    if (savingBarcode) return
+    setSavingBarcode(true)
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode: editingBarcodeValue.trim() || null }),
+      })
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, barcode: editingBarcodeValue.trim() || null } : p))
+        )
+        setEditingBarcodeId(null)
+        stempel.show('Barcode disimpan')
+      } else {
+        const result = await res.json().catch(() => null)
+        alert(result?.error || 'Gagal menyimpan barcode')
+      }
+    } finally {
+      setSavingBarcode(false)
+    }
+  }
+
+  async function handleSaveCostPrice(id: string) {
+    if (savingCostPrice) return
+    setSavingCostPrice(true)
+    try {
+      const value = Number(editingCostPriceValue) || 0
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cost_price: value }),
+      })
+      if (res.ok) {
+        setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, cost_price: value } : p)))
+        setEditingCostPriceId(null)
+        stempel.show('Harga modal disimpan')
+      } else {
+        const result = await res.json().catch(() => null)
+        alert(result?.error || 'Gagal menyimpan harga modal')
+      }
+    } finally {
+      setSavingCostPrice(false)
+    }
   }
 
   async function handleUpdateStock(id: string, delta: number) {
@@ -239,14 +299,39 @@ export default function ProductsPage() {
                     ))}
                   </select>
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="Harga Jual per Satuan (Opsional)"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Harga Modal (Opsional)"
+                    value={costPrice}
+                    onChange={(e) => setCostPrice(e.target.value)}
+                    className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Harga Jual (Opsional)"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
+                  />
+                </div>
+                {Number(price) > 0 && Number(costPrice) > 0 && (
+                  <p className={`text-xs font-medium -mt-1 ml-1 ${Number(price) - Number(costPrice) >= 0 ? 'text-income' : 'text-red-600'}`}>
+                    Untung per satuan: {formatRupiah(Number(price) - Number(costPrice))}
+                  </p>
+                )}
+                <div className="relative">
+                  <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Barcode (opsional, bisa scan langsung)"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    className="w-full pl-9 pr-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors font-mono"
+                  />
+                </div>
               </div>
 
               <button
@@ -318,11 +403,117 @@ export default function ProductsPage() {
                             <p className="text-sm text-muted font-medium">
                               {Number(p.price) > 0 ? `Harga: ${formatRupiah(Number(p.price))}` : 'Harga belum diatur'}
                             </p>
+                            {Number(p.price) > 0 && Number(p.cost_price) > 0 && (
+                              <p className={`text-xs font-semibold mt-0.5 ${Number(p.price) - Number(p.cost_price) >= 0 ? 'text-income' : 'text-red-600'}`}>
+                                Untung: {formatRupiah(Number(p.price) - Number(p.cost_price))} / satuan
+                              </p>
+                            )}
                           </div>
                           {p.stock <= LOW_STOCK_THRESHOLD && (
                             <span className="px-2 py-0.5 bg-red-50 text-red-700 text-[10px] uppercase tracking-wider rounded-md font-bold whitespace-nowrap">
                               Stok Tipis
                             </span>
+                          )}
+                        </div>
+
+                        {/* Harga modal: lihat / edit inline */}
+                        <div className="mb-2">
+                          {editingCostPriceId === p.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <Wallet className="w-3.5 h-3.5 text-muted shrink-0" />
+                              <input
+                                autoFocus
+                                type="number"
+                                min={0}
+                                value={editingCostPriceValue}
+                                onChange={(e) => setEditingCostPriceValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveCostPrice(p.id)
+                                  if (e.key === 'Escape') setEditingCostPriceId(null)
+                                }}
+                                placeholder="Harga modal"
+                                className="min-w-0 flex-1 px-2 py-1 bg-lavender/40 rounded-md text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                              />
+                              <button
+                                onClick={() => handleSaveCostPrice(p.id)}
+                                disabled={savingCostPrice}
+                                className="p-1 text-primary hover:bg-primary-light rounded transition-colors shrink-0"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setEditingCostPriceId(null)}
+                                className="p-1 text-muted hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingCostPriceId(p.id)
+                                setEditingCostPriceValue(p.cost_price ? String(p.cost_price) : '')
+                              }}
+                              className="flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors group"
+                            >
+                              <Wallet className="w-3.5 h-3.5 shrink-0" />
+                              {Number(p.cost_price) > 0 ? (
+                                <span>Modal: {formatRupiah(Number(p.cost_price))}</span>
+                              ) : (
+                                <span className="italic">Belum ada harga modal</span>
+                              )}
+                              <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Barcode: lihat / edit inline */}
+                        <div className="mb-3">
+                          {editingBarcodeId === p.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <Barcode className="w-3.5 h-3.5 text-muted shrink-0" />
+                              <input
+                                autoFocus
+                                type="text"
+                                value={editingBarcodeValue}
+                                onChange={(e) => setEditingBarcodeValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveBarcode(p.id)
+                                  if (e.key === 'Escape') setEditingBarcodeId(null)
+                                }}
+                                placeholder="Scan atau ketik barcode"
+                                className="min-w-0 flex-1 px-2 py-1 bg-lavender/40 rounded-md text-xs font-mono outline-none focus:ring-2 focus:ring-primary/30"
+                              />
+                              <button
+                                onClick={() => handleSaveBarcode(p.id)}
+                                disabled={savingBarcode}
+                                className="p-1 text-primary hover:bg-primary-light rounded transition-colors shrink-0"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setEditingBarcodeId(null)}
+                                className="p-1 text-muted hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingBarcodeId(p.id)
+                                setEditingBarcodeValue(p.barcode || '')
+                              }}
+                              className="flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors group"
+                            >
+                              <Barcode className="w-3.5 h-3.5 shrink-0" />
+                              {p.barcode ? (
+                                <span className="font-mono">{p.barcode}</span>
+                              ) : (
+                                <span className="italic">Belum ada barcode</span>
+                              )}
+                              <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
                           )}
                         </div>
 

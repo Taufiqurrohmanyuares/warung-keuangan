@@ -13,6 +13,15 @@ type ReceiptData = {
   total: number
   date: Date
   transactionId: string
+  paymentMethod?: 'cash' | 'qris' | 'debit'
+  paidAmount?: number
+  changeAmount?: number
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Tunai',
+  qris: 'QRIS',
+  debit: 'Debit',
 }
 
 function formatRupiah(n: number) {
@@ -76,6 +85,30 @@ export function ReceiptModal({ data, onClose }: { data: ReceiptData; onClose: ()
             <span>TOTAL</span>
             <span>Rp {formatRupiah(data.total)}</span>
           </div>
+
+          {data.paymentMethod && (
+            <>
+              <div className="border-t border-dashed border-ink/40 my-2" />
+              <div className="space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span>Metode Bayar</span>
+                  <span className="font-bold">{PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod}</span>
+                </div>
+                {typeof data.paidAmount === 'number' && (
+                  <div className="flex justify-between">
+                    <span>{data.paymentMethod === 'cash' ? 'Uang Diterima' : 'Dibayar'}</span>
+                    <span>Rp {formatRupiah(data.paidAmount)}</span>
+                  </div>
+                )}
+                {data.paymentMethod === 'cash' && typeof data.changeAmount === 'number' && (
+                  <div className="flex justify-between font-bold">
+                    <span>Kembalian</span>
+                    <span>Rp {formatRupiah(data.changeAmount)}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="border-t border-dashed border-ink/40 my-3" />
 

@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { todayWIB, monthRangeStr } from '@/lib/date'
 
 function getMonthRange(monthParam: string | null) {
-  // monthParam format: "2026-07". Kalau tidak ada, pakai bulan berjalan.
-  const now = new Date()
-  const [year, month] = monthParam
-    ? monthParam.split('-').map(Number)
-    : [now.getFullYear(), now.getMonth() + 1]
-
-  const from = new Date(year, month - 1, 1).toISOString().slice(0, 10)
-  const to = new Date(year, month, 0).toISOString().slice(0, 10) // hari terakhir bulan itu
-
-  return { from, to }
+  // monthParam format: "2026-07". Kalau tidak ada, pakai bulan berjalan (WIB).
+  const [yearStr, monthStr] = (monthParam || todayWIB().slice(0, 7)).split('-')
+  return monthRangeStr(Number(yearStr), Number(monthStr))
 }
 
 export async function GET(request: NextRequest) {
@@ -33,6 +27,7 @@ export async function GET(request: NextRequest) {
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
+      .eq('is_voided', false)
       .gte('occurred_at', from)
       .lte('occurred_at', to)
       .order('occurred_at', { ascending: false })
@@ -67,7 +62,7 @@ export async function GET(request: NextRequest) {
       netProfit,
       totalDebtRemaining,
       recentTransactions: transactions?.slice(0, 5) || [],
-      month: monthParam || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+      month: monthParam || todayWIB().slice(0, 7),
     })
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
