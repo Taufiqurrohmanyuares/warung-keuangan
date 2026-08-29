@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import ExcelJS from 'exceljs'
-import { todayWIB } from '@/lib/supabase/date'
+import { todayWIB } from '@/lib/date'
 
 
 export async function GET(request: NextRequest) {

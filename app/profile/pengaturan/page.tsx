@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import DashboardShell from '@/components/DashboardShell'
 import { createClient } from '@/lib/supabase/client'
-import { monthRangeStr, todayWIB } from '@/lib/supabase/date'
+import { monthRangeStr, todayWIB } from '@/lib/date'
 import { Field, ToggleRow, ActionButton, SettingsLayout } from '@/components/profile/shared'
 import {
   Bell, BellOff, Save, Palette, Banknote, DatabaseBackup,
