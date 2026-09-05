@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import DashboardShell from '@/components/DashboardShell'
 import { 
   Wallet, TrendingUp, TrendingDown, AlertCircle, 
-  ArrowUpRight, ArrowDownLeft, Calendar, Download, Loader2
+  ArrowUpRight, ArrowDownLeft, Calendar, Download, Loader2, Sparkles, RefreshCw
 } from 'lucide-react'
 import { monthRangeStr } from '@/lib/date'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -48,6 +48,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue())
   const [isExporting, setIsExporting] = useState(false)
+  const [insight, setInsight] = useState<string | null>(null)
+  const [insightLoading, setInsightLoading] = useState(false)
+  const [insightError, setInsightError] = useState<string | null>(null)
 
   async function fetchDashboard(month: string) {
     setLoading(true)
@@ -61,8 +64,28 @@ export default function DashboardPage() {
     }
   }
 
+  async function generateInsight() {
+    setInsightLoading(true)
+    setInsightError(null)
+    try {
+      const res = await fetch(`/api/dashboard/insight?month=${selectedMonth}`)
+      const result = await res.json()
+      if (!res.ok) {
+        setInsightError(result.error || 'Gagal membuat ringkasan')
+        return
+      }
+      setInsight(result.narrative)
+    } catch (err) {
+      setInsightError('Terjadi kesalahan, coba lagi')
+    } finally {
+      setInsightLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchDashboard(selectedMonth)
+    setInsight(null)
+    setInsightError(null)
   }, [selectedMonth])
 
   // PERBAIKAN DI FUNGSI INI
@@ -135,6 +158,61 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* ===== RINGKASAN AI ===== */}
+        {!loading && data && (
+          <div className="bg-gradient-to-br from-primary to-primary-dark rounded-2xl p-5 mb-6 shadow-sm shadow-primary/20">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-white">
+                <Sparkles className="w-4 h-4" />
+                <h3 className="text-sm font-bold">Ringkasan AI</h3>
+              </div>
+              {insight && !insightLoading && (
+                <button
+                  onClick={generateInsight}
+                  className="text-white/70 hover:text-white transition-colors"
+                  title="Buat ulang ringkasan"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {!insight && !insightLoading && !insightError && (
+              <div className="flex items-center justify-between gap-4 mt-2">
+                <p className="text-sm text-white/80">Minta AI buatkan ringkasan singkat dari laporan bulan ini.</p>
+                <button
+                  onClick={generateInsight}
+                  className="shrink-0 flex items-center gap-1.5 bg-white text-primary px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-white/90 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Buat Ringkasan
+                </button>
+              </div>
+            )}
+
+            {insightLoading && (
+              <div className="flex items-center gap-2 text-white/80 text-sm mt-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Lagi mikir...
+              </div>
+            )}
+
+            {insightError && !insightLoading && (
+              <div className="flex items-center justify-between gap-4 mt-2">
+                <p className="text-sm text-white/90">{insightError}</p>
+                <button
+                  onClick={generateInsight}
+                  className="shrink-0 flex items-center gap-1.5 bg-white text-primary px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-white/90 transition-colors"
+                >
+                  Coba Lagi
+                </button>
+              </div>
+            )}
+
+            {insight && !insightLoading && (
+              <p className="text-sm text-white leading-relaxed mt-2">{insight}</p>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
