@@ -117,7 +117,6 @@ export default function Sidebar() {
 
   const logo = (
     <div className="flex items-center gap-1.5">
-      {/* Logo diperbesar dan jarak dirapatkan */}
       <LogoIcon className="w-12 h-auto shrink-0" />
       <div className="hidden lg:flex flex-col justify-center mt-0.5">
         <p className="font-extrabold text-ink text-[14px] leading-tight whitespace-nowrap">Warung Keuangan</p>
@@ -188,6 +187,7 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* ============ HP: BAR ATAS ============ */}
       <header className="md:hidden sticky top-0 z-40 bg-card border-b border-ln pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between h-[60px] px-4">
           <div className="flex items-center gap-2.5">
@@ -198,6 +198,7 @@ export default function Sidebar() {
         </div>
       </header>
 
+      {/* ============ HP: MENU BAWAH ============ */}
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-card border-t border-ln px-2 pt-2 pb-[calc(8px+env(safe-area-inset-bottom))] flex items-end shadow-[0_-4px_24px_rgba(0,0,0,0.02)]"
         aria-label="Menu utama"
@@ -236,6 +237,7 @@ export default function Sidebar() {
         </button>
       </nav>
 
+      {/* ============ HP: LEMBAR "LAINNYA" (BOTTOM SHEET) ============ */}
       {moreOpen && (
         <div className="md:hidden fixed inset-0 z-[60] flex items-end">
           <div className="absolute inset-0 bg-ink/40 animate-in fade-in duration-200" onClick={() => setMoreOpen(false)} />
@@ -284,6 +286,7 @@ export default function Sidebar() {
         </div>
       )}
 
+      {/* ============ TABLET (Rail) & DESKTOP (Sidebar Penuh) ============ */}
       <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-20 lg:w-[248px] bg-card border-r border-ln z-40">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-2 px-3 lg:px-3 pt-5 pb-4 lg:h-[80px] lg:py-0 shrink-0">
           {logo}
