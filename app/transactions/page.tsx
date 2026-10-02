@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import DashboardShell from '@/components/DashboardShell'
 import { todayWIB } from '@/lib/date'
 import { Stempel, useStempel } from '@/components/Stempel'
-import { Plus, Minus, Trash2, Wallet, Tag, AlignLeft, Download, Search, ShoppingCart, Ban } from 'lucide-react'
+import { Plus, Minus, Trash2, Wallet, Tag, AlignLeft, Download, Search, ShoppingCart, Ban, Loader2 } from 'lucide-react'
 
 import { transactionSchema, TransactionFormValues } from '@/lib/supabase/validations/transaction'
 import { createTransaction } from '@/server/actions/transaction'
@@ -142,7 +142,6 @@ export default function TransactionsPage() {
     }
   }
 
-  // Khusus transaksi dari Kasir: dibatalkan (bukan dihapus permanen), stok otomatis dibalikin.
   async function handleVoid(id: string) {
     if (voidingId) return
     if (!confirm('Batalkan transaksi ini? Stok barang yang terjual akan otomatis dikembalikan.')) return
@@ -205,34 +204,36 @@ export default function TransactionsPage() {
   return (
     <DashboardShell>
       <Stempel visible={stempel.visible} label={stempel.label} />
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+      <div className="w-full pb-16 lg:pb-10">
 
-        <div className="mb-6 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+        {/* ===================== HEADER ===================== */}
+        <div className="mb-5 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-ink tracking-tight">Catat Transaksi</h1>
-            <p className="text-sm text-muted">Tambahkan pemasukan atau pengeluaran baru</p>
+            <h1 className="text-[24px] font-extrabold tracking-tight text-ink m-0">Catat Transaksi </h1>
+            <p className="text-mu mt-1 text-[14px]">Tambahkan pemasukan atau pengeluaran manual secara instan</p>
           </div>
           <a 
             href="/api/transactions/export-excel" 
-            className="flex items-center gap-2 px-4 py-2 bg-white text-ink rounded-xl text-sm font-medium hover:bg-lavender/60 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-card border border-ln rounded-[14px] text-[14px] font-bold text-ink hover:bg-so hover:text-br hover:border-br transition-colors shadow-sm"
           >
             <Download className="w-4 h-4" />
             <span>Unduh Excel</span>
           </a>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           
-          {/* KOLOM KIRI: Form Input */}
+          {/* ===================== KOLOM KIRI: FORM INPUT ===================== */}
           <div className="lg:col-span-1 sticky top-6">
-            <form onSubmit={handleSubmit(onSubmit as any)} className="bg-white shadow-sm rounded-2xl p-6">
+            <form onSubmit={handleSubmit(onSubmit as any)} className="bg-card border border-ln shadow-sm rounded-[18px] p-5">
               
-              <div className="flex p-1 bg-lavender/60 rounded-xl mb-6">
+              {/* Pilihan Tipe Transaksi */}
+              <div className="flex p-1 bg-bg border border-ln rounded-[14px] mb-5">
                 <button
                   type="button"
                   onClick={() => { setValue('type', 'income'); setValue('category_id', '') }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    currentType === 'income' ? 'bg-white text-green-600 shadow-sm' : 'text-muted hover:text-ink'
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] text-[13px] font-bold transition-all ${
+                    currentType === 'income' ? 'bg-br text-white shadow-sm' : 'text-mu hover:text-ink'
                   }`}
                 >
                   <Plus className="w-4 h-4" /> Pemasukan
@@ -240,8 +241,8 @@ export default function TransactionsPage() {
                 <button
                   type="button"
                   onClick={() => { setValue('type', 'expense'); setValue('category_id', '') }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    currentType === 'expense' ? 'bg-white text-red-600 shadow-sm' : 'text-muted hover:text-ink'
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] text-[13px] font-bold transition-all ${
+                    currentType === 'expense' ? 'bg-rd text-white shadow-sm' : 'text-mu hover:text-ink'
                   }`}
                 >
                   <Minus className="w-4 h-4" /> Pengeluaran
@@ -249,32 +250,34 @@ export default function TransactionsPage() {
               </div>
 
               <div className="space-y-4">
+                {/* Nominal */}
                 <div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Wallet className="h-5 w-5 text-muted" />
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Wallet className="h-4 w-4 text-mu" />
                     </div>
                     <input
                       type="number"
                       inputMode="numeric"
                       placeholder="Nominal (contoh: 50000)"
                       {...register('amount', { valueAsNumber: true })}
-                      className={`w-full pl-10 pr-4 py-3 bg-lavender/40 border rounded-xl text-sm outline-none transition-all ${
-                        errors.amount ? 'border-red-400 focus:ring-2 focus:ring-red-200' : 'border-transparent focus:ring-2 focus:ring-primary/30 focus:bg-white'
+                      className={`w-full pl-10 pr-4 py-3 bg-card border rounded-[14px] text-sm text-ink outline-none transition-all ${
+                        errors.amount ? 'border-rd focus:ring-2 focus:ring-rd/20' : 'border-ln focus:border-br'
                       }`}
                     />
                   </div>
-                  {errors.amount && <p className="text-red-500 text-xs mt-1 ml-1">{errors.amount.message}</p>}
+                  {errors.amount && <p className="text-rd text-xs mt-1 ml-1 font-medium">{errors.amount.message}</p>}
                 </div>
 
+                {/* Kategori */}
                 <div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Tag className="h-5 w-5 text-muted" />
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Tag className="h-4 w-4 text-mu" />
                     </div>
                     <select
                       {...register('category_id')}
-                      className="w-full pl-10 pr-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:bg-white outline-none transition-all appearance-none text-ink"
+                      className="w-full pl-10 pr-4 py-3 bg-card border border-ln rounded-[14px] text-sm focus:border-br outline-none transition-all appearance-none text-ink cursor-pointer"
                     >
                       <option value="">Pilih kategori (opsional)</option>
                       {filteredCategories.map((c) => (
@@ -284,16 +287,17 @@ export default function TransactionsPage() {
                   </div>
                 </div>
 
+                {/* Catatan */}
                 <div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <AlignLeft className="h-5 w-5 text-muted" />
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <AlignLeft className="h-4 w-4 text-mu" />
                     </div>
                     <input
                       type="text"
                       placeholder="Catatan (opsional)"
                       {...register('note')}
-                      className="w-full pl-10 pr-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:bg-white outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink focus:border-br outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -302,52 +306,53 @@ export default function TransactionsPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full mt-6 bg-primary hover:bg-primary-dark text-white rounded-xl py-3 text-sm font-medium transition-colors disabled:opacity-50 flex justify-center items-center gap-2 shadow-sm shadow-primary/30"
+                className="w-full mt-5 bg-br hover:brightness-110 text-white rounded-[14px] py-3.5 text-sm font-bold transition-all disabled:opacity-50 flex justify-center items-center gap-2 shadow-[0_6px_14px_rgba(30,155,80,0.25)]"
               >
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 {isPending ? 'Menyimpan...' : 'Simpan Transaksi'}
               </button>
             </form>
           </div>
 
-          {/* KOLOM KANAN: Daftar Transaksi & Filter */}
-          <div className="lg:col-span-2">
+          {/* ===================== KOLOM KANAN: DAFTAR & FILTER ===================== */}
+          <div className="lg:col-span-2 space-y-4">
             
-            <div className="mb-4 space-y-3">
+            <div className="bg-card border border-ln rounded-[18px] p-4 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-ink">Riwayat Transaksi</h2>
-                <span className="text-xs text-muted">Menampilkan {displayedTransactions.length} data</span>
+                <h2 className="text-[15px] font-bold text-ink m-0">Riwayat Transaksi</h2>
+                <span className="text-xs font-semibold text-mu">Total {displayedTransactions.length} data</span>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-muted" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-mu" />
                   </div>
                   <input
                     type="text"
                     placeholder="Cari catatan atau kategori..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-white rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors shadow-sm"
                   />
                 </div>
 
-                <div className="flex bg-white rounded-xl p-1 shadow-sm">
+                <div className="flex bg-bg border border-ln rounded-[14px] p-1 shadow-sm">
                   <button
                     onClick={() => setFilterType('all')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'all' ? 'bg-primary text-white' : 'text-muted hover:bg-lavender/50'}`}
+                    className={`px-3 py-1.5 rounded-[10px] text-xs font-bold transition-all ${filterType === 'all' ? 'bg-br text-white shadow-sm' : 'text-mu hover:text-ink'}`}
                   >
                     Semua
                   </button>
                   <button
                     onClick={() => setFilterType('income')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'income' ? 'bg-green-600 text-white' : 'text-muted hover:bg-lavender/50'}`}
+                    className={`px-3 py-1.5 rounded-[10px] text-xs font-bold transition-all ${filterType === 'income' ? 'bg-br text-white shadow-sm' : 'text-mu hover:text-ink'}`}
                   >
                     Masuk
                   </button>
                   <button
                     onClick={() => setFilterType('expense')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'expense' ? 'bg-red-600 text-white' : 'text-muted hover:bg-lavender/50'}`}
+                    className={`px-3 py-1.5 rounded-[10px] text-xs font-bold transition-all ${filterType === 'expense' ? 'bg-rd text-white shadow-sm' : 'text-mu hover:text-ink'}`}
                   >
                     Keluar
                   </button>
@@ -355,10 +360,10 @@ export default function TransactionsPage() {
               </div>
 
               {displayedTransactions.length > 0 && (
-                <div className="flex items-center gap-4 bg-primary-light rounded-xl px-4 py-2.5 text-sm">
-                  <span className="text-green-700 font-semibold">+{formatRupiah(filteredSummary.income)}</span>
-                  <span className="text-red-600 font-semibold">-{formatRupiah(filteredSummary.expense)}</span>
-                  <span className="ml-auto text-primary font-bold">
+                <div className="flex items-center gap-4 bg-so border border-br/20 rounded-[14px] px-4 py-3 text-xs sm:text-sm font-semibold">
+                  <span className="text-br">Masuk: +{formatRupiah(filteredSummary.income)}</span>
+                  <span className="text-rd">Keluar: -{formatRupiah(filteredSummary.expense)}</span>
+                  <span className="ml-auto text-ink font-extrabold">
                     Bersih: {formatRupiah(filteredSummary.income - filteredSummary.expense)}
                   </span>
                 </div>
@@ -368,24 +373,26 @@ export default function TransactionsPage() {
             {loadingData ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse bg-white/60 h-20 rounded-xl w-full"></div>
+                  <div key={i} className="animate-pulse bg-card border border-ln h-20 rounded-[16px] w-full"></div>
                 ))}
               </div>
             ) : displayedTransactions.length === 0 ? (
-              <div className="bg-white/60 border-2 border-dashed border-borderc rounded-2xl py-12 flex flex-col items-center justify-center text-center">
-                <p className="text-muted text-sm">Tidak ada riwayat transaksi yang cocok.</p>
+              <div className="bg-card border border-ln rounded-[18px] py-14 flex flex-col items-center justify-center text-center px-4">
+                <Wallet className="h-10 w-10 text-mu mb-2 opacity-40" />
+                <p className="text-ink font-bold text-sm">Tidak ada riwayat transaksi</p>
+                <p className="text-mu text-xs mt-1">Belum ada data yang cocok dengan filter atau pencarian Anda.</p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {groupedTransactions.map((group) => (
                   <div key={group.label}>
                     <div className="flex items-center justify-between mb-2 px-1">
-                      <h3 className="text-xs font-bold text-muted uppercase tracking-wider">{group.label}</h3>
-                      <span className={`text-xs font-bold ${group.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <h3 className="text-xs font-extrabold text-mu uppercase tracking-wider">{group.label}</h3>
+                      <span className={`text-xs font-bold ${group.net >= 0 ? 'text-br' : 'text-rd'}`}>
                         {group.net >= 0 ? '+' : ''}{formatRupiah(group.net)}
                       </span>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {group.items.map((t) => {
                         const isDeleting = deletingId === t.id
                         const isVoiding = voidingId === t.id
@@ -393,37 +400,39 @@ export default function TransactionsPage() {
                         return (
                           <div
                             key={t.id}
-                            className={`group bg-white rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-all ${(isDeleting || isVoiding) ? 'opacity-50' : ''} ${isVoided ? 'opacity-60' : ''}`}
+                            className={`group bg-card border border-ln rounded-[16px] p-4 flex justify-between items-center shadow-sm hover:border-br/50 transition-all ${(isDeleting || isVoiding) ? 'opacity-50' : ''} ${isVoided ? 'opacity-60' : ''}`}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className={`p-3 rounded-xl ${isVoided ? 'bg-lavender/60 text-muted' : t.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                            <div className="flex items-center gap-3.5 min-w-0 pr-3">
+                              <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0 ${
+                                isVoided ? 'bg-bg text-mu' : t.type === 'income' ? 'bg-so text-br' : 'bg-rs text-rd'
+                              }`}>
                                 {t.type === 'income' ? <Plus className="w-5 h-5" /> : <Minus className="w-5 h-5" />}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <p className={`text-sm font-bold text-ink ${isVoided ? 'line-through' : ''}`}>
+                                  <p className={`text-[14px] font-bold text-ink truncate ${isVoided ? 'line-through' : ''}`}>
                                     {t.categories?.name ?? (t.type === 'income' ? 'Pemasukan' : 'Pengeluaran')}
                                   </p>
                                   {t.source === 'kasir' && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-primary-light text-primary text-[10px] font-bold rounded-md shrink-0">
+                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-so text-br text-[10px] font-extrabold rounded-md shrink-0 border border-br/20">
                                       <ShoppingCart className="w-2.5 h-2.5" /> Kasir
                                     </span>
                                   )}
                                   {isVoided && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold rounded-md shrink-0">
+                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-rs text-rd text-[10px] font-extrabold rounded-md shrink-0 border border-rd/20">
                                       <Ban className="w-2.5 h-2.5" /> Dibatalkan
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-muted mt-0.5">
+                                <p className="text-[12px] text-mu mt-0.5 truncate">
                                   {formatDate(t.occurred_at)}{t.note ? ` · ${t.note}` : ''}
                                   {isVoided && t.void_reason ? ` · ${t.void_reason}` : ''}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
-                              <p className={`text-base font-bold ${isVoided ? 'text-muted line-through' : t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <p className={`text-[14px] font-extrabold ${isVoided ? 'text-mu line-through' : t.type === 'income' ? 'text-br' : 'text-rd'}`}>
                                 {t.type === 'income' ? '+' : '-'}{formatRupiah(Number(t.amount))}
                               </p>
                               {!isVoided && (
@@ -431,7 +440,7 @@ export default function TransactionsPage() {
                                   <button
                                     onClick={() => handleVoid(t.id)}
                                     disabled={isVoiding}
-                                    className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                    className="p-2 text-mu hover:text-rd hover:bg-rs rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
                                     title="Batalkan Transaksi (stok dikembalikan)"
                                   >
                                     <Ban className="w-4 h-4" />
@@ -440,7 +449,7 @@ export default function TransactionsPage() {
                                   <button
                                     onClick={() => handleDelete(t.id)}
                                     disabled={isDeleting}
-                                    className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                                    className="p-2 text-mu hover:text-rd hover:bg-rs rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
                                     title="Hapus Transaksi"
                                   >
                                     <Trash2 className="w-4 h-4" />

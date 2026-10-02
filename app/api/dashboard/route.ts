@@ -56,12 +56,32 @@ export async function GET(request: NextRequest) {
 
     const netProfit = totalIncome - totalExpense
 
+    
+    // 3. Data grafik harian: semua tanggal dari tgl 1 sampai hari ini (atau akhir bulan), yang kosong diisi 0
+    const byDate: Record<string, { income: number; expense: number }> = {}
+    transactions?.forEach((t) => {
+      const key = String(t.occurred_at).slice(0, 10)
+      byDate[key] = byDate[key] || { income: 0, expense: 0 }
+      const amount = Number(t.amount || 0)
+      if (t.type === 'income') byDate[key].income += amount
+      else if (t.type === 'expense') byDate[key].expense += amount
+    })
+
+    const today = todayWIB()
+    const lastDay = to < today ? to : today
+    const chartData: { date: string; income: number; expense: number }[] = []
+    for (let d = new Date(`${from}T00:00:00Z`); d.toISOString().slice(0, 10) <= lastDay; d.setUTCDate(d.getUTCDate() + 1)) {
+      const key = d.toISOString().slice(0, 10)
+      chartData.push({ date: key, income: byDate[key]?.income ?? 0, expense: byDate[key]?.expense ?? 0 })
+    }
+
     return NextResponse.json({
       totalIncome,
       totalExpense,
       netProfit,
       totalDebtRemaining,
       recentTransactions: transactions?.slice(0, 5) || [],
+      chartData,
       month: monthParam || todayWIB().slice(0, 7),
     })
   } catch (error) {

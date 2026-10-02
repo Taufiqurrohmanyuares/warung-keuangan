@@ -1,325 +1,154 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import DashboardShell from '@/components/DashboardShell'
 import { createClient } from '@/lib/supabase/client'
-import { monthRangeStr, todayWIB } from '@/lib/date'
-import { Field, ToggleRow, ActionButton, SettingsLayout } from '@/components/profile/shared'
-import {
-  Bell, BellOff, Save, Palette, Banknote, DatabaseBackup,
-  FileSpreadsheet, FileText, UploadCloud, DownloadCloud, Settings2, ArrowLeft
-} from 'lucide-react'
+import { MenuListItem } from '@/components/profile/shared'
+import { Store, ReceiptText, BookUser, Wallet, Mail, CalendarDays, Settings, ShieldCheck, Info, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 
-export default function PengaturanPage() {
+function formatRupiah(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+}
+
+export default function ProfileHubPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
-  const [isPending, startTransition] = useTransition()
-
-  const [reminderAktif, setReminderAktif] = useState(true)
-  const [jatuhTempoHari, setJatuhTempoHari] = useState(7)
-  const [reminderSebelumHari, setReminderSebelumHari] = useState(1)
-  const [notifikasiAktif, setNotifikasiAktif] = useState(true)
-  const [backupOtomatis, setBackupOtomatis] = useState(true)
-  const [namaToko, setNamaToko] = useState('Buku Warung') // Untuk header PDF
+  const [email, setEmail] = useState('')
+  const [joinedAt, setJoinedAt] = useState('')
+  const [namaToko, setNamaToko] = useState('')
+  const [namaPemilik, setNamaPemilik] = useState('')
+  const [stats, setStats] = useState({ totalTx: 0, totalDebts: 0, incomeThisMonth: 0 })
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profile) {
-        setReminderAktif(profile.kasbon_reminder_aktif ?? true)
-        setJatuhTempoHari(profile.kasbon_jatuh_tempo_hari ?? 7)
-        setReminderSebelumHari(profile.kasbon_reminder_sebelum_hari ?? 1)
-        setNotifikasiAktif(profile.notifikasi_aktif ?? true)
-        setBackupOtomatis(profile.backup_otomatis ?? true)
-        if (profile.nama_toko) setNamaToko(profile.nama_toko)
+    async function loadData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setLoading(false); return }
+
+        setEmail(user.email || '')
+        setJoinedAt(user.created_at || '')
+
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        if (profile) {
+          setNamaToko(profile.nama_toko || '')
+          setNamaPemilik(profile.full_name || '')
+        }
+
+        const firstDayOfMonth = new Date()
+        firstDayOfMonth.setDate(1)
+        const firstDayStr = firstDayOfMonth.toISOString().split('T')[0]
+
+        const [{ count: txCount }, { count: debtCount }, { data: incomeRows }] = await Promise.all([
+          supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('debts').select('*', { count: 'exact', head: true }).eq('user_id', user.id).neq('status', 'paid'),
+          supabase.from('transactions').select('amount').eq('user_id', user.id).eq('type', 'income').gte('occurred_at', firstDayStr),
+        ])
+
+        setStats({
+          totalTx: txCount || 0,
+          totalDebts: debtCount || 0,
+          incomeThisMonth: (incomeRows || []).reduce((s, r: any) => s + Number(r.amount || 0), 0),
+        })
+      } catch (error) {
+        console.error("Gagal memuat profil:", error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
-    load()
+    loadData()
   }, [])
 
-  function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    startTransition(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      
-      const safeJatuhTempo = Math.max(1, jatuhTempoHari)
-      const safeReminder = Math.max(0, reminderSebelumHari)
-
-      const { error } = await supabase.from('profiles').upsert({
-        id: user.id,
-        kasbon_reminder_aktif: reminderAktif,
-        kasbon_jatuh_tempo_hari: safeJatuhTempo,
-        kasbon_reminder_sebelum_hari: safeReminder,
-        notifikasi_aktif: notifikasiAktif,
-        backup_otomatis: backupOtomatis,
-        updated_at: new Date().toISOString(),
-      })
-      
-      if (error) alert('Gagal menyimpan: ' + error.message)
-      else {
-        setJatuhTempoHari(safeJatuhTempo)
-        setReminderSebelumHari(safeReminder)
-        alert('Pengaturan berhasil disimpan!')
-      }
-    })
-  }
-
-  // FITUR NYATA: EXPORT EXCEL
-  async function handleExportExcel() {
-    try {
-      const now = new Date()
-      const [y, m] = todayWIB().slice(0, 7).split('-').map(Number)
-const { from: fromDate, to: toDate } = monthRangeStr(y, m)
-      
-      const res = await fetch(`/api/transactions/export-excel?from=${fromDate}&to=${toDate}`)
-      if (!res.ok) throw new Error('Gagal')
-      
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Data-Keuangan-${fromDate}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
-    } catch (err) {
-      alert('Gagal mengunduh Excel. Pastikan ada data bulan ini.')
-    }
-  }
-
-  // FITUR NYATA: EXPORT PDF (Buka Tab Baru Berisi Laporan, Lalu Cetak)
-  async function handleExportPDF() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return alert('Sesi habis, silakan login ulang')
-
-      const now = new Date()
-      const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-      const toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-
-      // Ambil transaksi bulan ini dari database
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('*, categories(name)')
-        .eq('user_id', user.id)
-        .gte('occurred_at', fromDate)
-        .lte('occurred_at', toDate)
-        .order('occurred_at', { ascending: true })
-
-      if (!transactions || transactions.length === 0) {
-        return alert('Tidak ada transaksi di bulan ini untuk dicetak.')
-      }
-
-      let totalIncome = 0
-      let totalExpense = 0
-
-      // Susun baris tabel HTML
-      const tableRows = transactions.map((t, index) => {
-        const isIncome = t.type === 'income'
-        if (isIncome) totalIncome += Number(t.amount)
-        else totalExpense += Number(t.amount)
-        
-        return `
-          <tr>
-            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">${index + 1}</td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb;">${new Date(t.occurred_at).toLocaleDateString('id-ID')}</td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${isIncome ? '#16a34a' : '#dc2626'}; font-weight: bold;">${isIncome ? 'Pemasukan' : 'Pengeluaran'}</td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb;">${(t.categories as any)?.name || '-'}</td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb;">${t.note || '-'}</td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: 500;">Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
-          </tr>
-        `
-      }).join('')
-
-      // Template Laporan Rapi
-      const printContent = `
-        <!DOCTYPE html>
-        <html lang="id">
-          <head>
-            <meta charset="UTF-8">
-            <title>Laporan Keuangan - ${namaToko}</title>
-            <style>
-              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #111827; margin: 40px; }
-              .header { text-align: center; border-bottom: 2px solid #5b4fe5; padding-bottom: 20px; margin-bottom: 30px; }
-              .header h1 { margin: 0 0 5px 0; color: #111827; font-size: 28px; }
-              .header p { margin: 0; color: #6b7280; font-size: 14px; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
-              th { background-color: #f9fafb; padding: 12px 10px; border: 1px solid #e5e7eb; text-align: left; color: #374151; }
-              .summary { width: 300px; float: right; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; background: #f9fafb; }
-              .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-              .summary-total { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db; font-weight: bold; font-size: 18px; }
-              @media print {
-                body { margin: 0; padding: 20px; }
-                .summary { page-break-inside: avoid; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>${namaToko}</h1>
-              <p>Laporan Keuangan Periode: <strong>${new Date(fromDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})} - ${new Date(toDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</strong></p>
-            </div>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th style="text-align: center; width: 50px;">No</th>
-                  <th style="width: 120px;">Tanggal</th>
-                  <th style="width: 120px;">Tipe</th>
-                  <th style="width: 150px;">Kategori</th>
-                  <th>Catatan</th>
-                  <th style="text-align: right; width: 150px;">Nominal</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tableRows}
-              </tbody>
-            </table>
-
-            <div class="summary">
-              <div class="summary-row">
-                <span style="color: #6b7280;">Total Pemasukan:</span>
-                <span style="color: #16a34a; font-weight: bold;">Rp ${totalIncome.toLocaleString('id-ID')}</span>
-              </div>
-              <div class="summary-row">
-                <span style="color: #6b7280;">Total Pengeluaran:</span>
-                <span style="color: #dc2626; font-weight: bold;">Rp ${totalExpense.toLocaleString('id-ID')}</span>
-              </div>
-              <div class="summary-total">
-                <span>Saldo Bersih:</span>
-                <span style="color: #5b4fe5;">Rp ${(totalIncome - totalExpense).toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-            
-            <script>
-              // Otomatis munculkan dialog print begitu selesai dimuat
-              window.onload = function() { 
-                setTimeout(() => {
-                  window.print();
-                }, 500); // Jeda setengah detik biar tabel terender sempurna
-              }
-            </script>
-          </body>
-        </html>
-      `
-
-      // Buka tab baru, tulis HTML di dalamnya
-      const printWindow = window.open('', '_blank')
-      if (printWindow) {
-        printWindow.document.write(printContent)
-        printWindow.document.close()
-      } else {
-        alert('Mohon izinkan Pop-up (Pop-up Blocker) di browser Anda untuk mencetak PDF.')
-      }
-
-    } catch (err) {
-      console.error(err)
-      alert('Gagal menyusun laporan PDF.')
-    }
-  }
-
-  // FITUR NYATA: BACKUP DATA (Download JSON file)
-  function handleBackup() {
-    const backupData = JSON.stringify({ 
-      app: 'Buku Warung', 
-      backupDate: new Date().toISOString(), 
-      settings: { reminderAktif, jatuhTempoHari, reminderSebelumHari, notifikasiAktif, backupOtomatis } 
-    }, null, 2)
-    
-    const blob = new Blob([backupData], { type: 'application/json' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `Backup-Warung-${new Date().toISOString().slice(0,10)}.json`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    window.URL.revokeObjectURL(url)
-  }
-
-  // FITUR NYATA: RESTORE DATA (Membuka file picker)
-  function handleRestore() {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = (e: any) => {
-      const file = e.target.files[0]
-      if (file) alert(`Data dari file "${file.name}" berhasil dibaca (Simulasi Restore Sukses!)`)
-    }
-    input.click()
-  }
+  const formattedJoinDate = joinedAt
+    ? new Date(joinedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '-'
 
   return (
     <DashboardShell>
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+      <div className="w-full pb-16 lg:pb-10">
+
+        {/* ===================== HEADER ===================== */}
         <div className="mb-6">
-          <Link href="/profile" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 bg-white hover:bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
-            <ArrowLeft className="w-4 h-4" /> Kembali ke Profil
-          </Link>
+          <h1 className="text-[24px] font-extrabold tracking-tight text-ink m-0">Profil & Akun</h1>
+          <p className="text-mu mt-1 text-[14px]">Informasi warung dan pengaturan sistem</p>
         </div>
 
-        {loading ? (
-          <div className="animate-pulse bg-white h-96 rounded-xl w-full border border-gray-200"></div>
-        ) : (
-          <form onSubmit={handleSave}>
-            <SettingsLayout
-              title="Pengaturan"
-              subtitle="Kasbon, aplikasi, dan pencadangan data — semua di satu tempat"
-              tipTitle="Kenapa digabung di sini?"
-              tipIcon={<Settings2 className="w-5 h-5 text-blue-600" />}
-              tip="Pengaturan ini jarang diubah sehari-hari, jadi kami satukan supaya Anda tidak perlu berpindah-pindah halaman."
-              footer={
-                <button type="submit" disabled={isPending} className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl py-3 text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
-                  <Save className="w-4 h-4" /> {isPending ? 'Menyimpan...' : 'Simpan Semua Perubahan'}
-                </button>
-              }
-            >
-              <div className="pb-6 border-b border-gray-100">
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Kasbon</h2>
-                <div className="space-y-4">
-                  <ToggleRow icon={reminderAktif ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />} label="Aktifkan Reminder Kasbon" description="Ingatkan pelanggan sebelum jatuh tempo" checked={reminderAktif} onChange={setReminderAktif} />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                    <Field label="Lama Jatuh Tempo Default (hari)" type="number" value={jatuhTempoHari} onChange={(e) => setJatuhTempoHari(Number(e.target.value))} />
-                    <Field label="Reminder Sebelum Jatuh Tempo (hari)" type="number" value={reminderSebelumHari} onChange={(e) => setReminderSebelumHari(Number(e.target.value))} />
-                  </div>
-                  <ToggleRow icon={<Bell className="w-4 h-4" />} label="Aktifkan Notifikasi" description="Notifikasi kasbon jatuh tempo di aplikasi" checked={notifikasiAktif} onChange={setNotifikasiAktif} />
-                </div>
+        {/* ===================== KARTU PROFIL UTAMA ===================== */}
+        <div className="bg-card border border-ln rounded-[22px] p-6 sm:p-7 shadow-sm mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="w-20 h-20 bg-br text-white rounded-[20px] flex items-center justify-center font-extrabold text-3xl shadow-[0_6px_14px_rgba(30,155,80,0.25)] shrink-0">
+              {(namaToko || namaPemilik || email || 'W').charAt(0).toUpperCase()}
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-[20px] font-extrabold text-ink">{namaToko || 'Nama Warung Anda'}</h2>
+              <p className="text-mu text-sm font-semibold">{namaPemilik || 'Pemilik Warung'}</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-mu pt-1">
+                <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-br" /> {email}</span>
+                <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-br" /> Bergabung {formattedJoinDate}</span>
               </div>
+            </div>
+          </div>
 
-              <div className="pb-6 border-b border-gray-100">
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Aplikasi</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3.5 bg-gray-50/50 rounded-xl border border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white text-gray-500 rounded-lg shadow-sm border border-gray-100"><Palette className="w-4 h-4" /></div>
-                      <p className="text-sm font-semibold text-gray-800">Tema</p>
-                    </div>
-                    <span className="text-xs font-bold bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg">Terang</span>
-                  </div>
-                  <ToggleRow icon={<DatabaseBackup className="w-4 h-4" />} label="Backup Otomatis" description="Data dicadangkan otomatis setiap hari" checked={backupOtomatis} onChange={setBackupOtomatis} />
-                </div>
-              </div>
-
+          {/* Statistik Ringkas */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-ln">
+            <div className="bg-bg border border-ln rounded-[16px] p-4 flex items-center gap-4">
+              <div className="w-10 h-10 bg-so text-br rounded-[12px] flex items-center justify-center shrink-0"><ReceiptText className="w-5 h-5" /></div>
               <div>
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Data & Cadangan</h2>
-                <div className="space-y-2.5">
-                  <ActionButton icon={<FileSpreadsheet className="w-4 h-4 text-green-600" />} label="Export ke Excel" onClick={handleExportExcel} />
-                  
-                  {/* TOMBOL CETAK PDF DI SINI */}
-                  <ActionButton icon={<FileText className="w-4 h-4 text-red-600" />} label="Cetak ke PDF" onClick={handleExportPDF} />
-                  
-                  <ActionButton icon={<UploadCloud className="w-4 h-4 text-blue-600" />} label="Backup Data Sekarang" onClick={handleBackup} />
-                  <ActionButton icon={<DownloadCloud className="w-4 h-4 text-orange-600" />} label="Restore Data" onClick={handleRestore} />
-                </div>
+                <p className="text-[11px] font-bold text-mu uppercase tracking-wider mb-0.5">Total Transaksi</p>
+                <p className="text-[16px] font-extrabold text-ink leading-tight">{stats.totalTx} Catatan</p>
               </div>
-            </SettingsLayout>
-          </form>
+            </div>
+            <div className="bg-bg border border-ln rounded-[16px] p-4 flex items-center gap-4">
+              <div className="w-10 h-10 bg-so text-br rounded-[12px] flex items-center justify-center shrink-0"><BookUser className="w-5 h-5" /></div>
+              <div>
+                <p className="text-[11px] font-bold text-mu uppercase tracking-wider mb-0.5">Kasbon Aktif</p>
+                <p className="text-[16px] font-extrabold text-ink leading-tight">{stats.totalDebts} Orang</p>
+              </div>
+            </div>
+            <div className="bg-bg border border-ln rounded-[16px] p-4 flex items-center gap-4">
+              <div className="w-10 h-10 bg-so text-br rounded-[12px] flex items-center justify-center shrink-0"><Wallet className="w-5 h-5" /></div>
+              <div>
+                <p className="text-[11px] font-bold text-mu uppercase tracking-wider mb-0.5">Pemasukan Bulan Ini</p>
+                <p className="text-[16px] font-extrabold text-br leading-tight">{formatRupiah(stats.incomeThisMonth)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===================== MENU NAVIGASI PROFIL ===================== */}
+        {loading ? (
+          <div className="animate-pulse bg-card border border-ln h-64 rounded-[22px] w-full" />
+        ) : (
+          <div className="bg-card border border-ln shadow-sm rounded-[22px] p-2 sm:p-3 divide-y divide-ln">
+            <MenuListItem 
+              href="/profile/warung" 
+              icon={<Store className="w-5 h-5 text-br" />} 
+              iconBg="bg-so border border-br/20" 
+              title="Informasi Warung" 
+              description="Nama warung, alamat, nomor HP, dan jam operasional" 
+            />
+            <MenuListItem 
+              href="/profile/pengaturan" 
+              icon={<Settings className="w-5 h-5 text-br" />} 
+              iconBg="bg-so border border-br/20" 
+              title="Pengaturan" 
+              description="Kasbon, aplikasi, dan cadangan data" 
+            />
+            <MenuListItem 
+              href="/profile/security" 
+              icon={<ShieldCheck className="w-5 h-5 text-rd" />} 
+              iconBg="bg-rs border border-rd/20" 
+              title="Keamanan" 
+              description="Ubah password dan keluar akun" 
+            />
+            <MenuListItem 
+              href="/profile/tentang" 
+              icon={<Info className="w-5 h-5 text-ink" />} 
+              iconBg="bg-bg border border-ln" 
+              title="Tentang & Bantuan" 
+              description="Versi aplikasi, panduan, dan kontak developer" 
+            />
+          </div>
         )}
       </div>
     </DashboardShell>

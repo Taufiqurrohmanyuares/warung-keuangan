@@ -5,7 +5,7 @@ import DashboardShell from '@/components/DashboardShell'
 import { Stempel, useStempel } from '@/components/Stempel'
 import {
   Package, Trash2, PlusCircle, MinusCircle, Search, ChevronLeft, ChevronRight,
-  SlidersHorizontal, Boxes, AlertTriangle, Wallet, PackagePlus, Barcode, Pencil, Check, X,
+  SlidersHorizontal, Boxes, AlertTriangle, Wallet, PackagePlus, Barcode, Pencil, Check, X, Loader2, Plus,
 } from 'lucide-react'
 import { LOW_STOCK_THRESHOLD } from '@/lib/supabase/constants'
 
@@ -41,6 +41,10 @@ export default function ProductsPage() {
   const [price, setPrice] = useState('')
   const [costPrice, setCostPrice] = useState('')
   const [barcode, setBarcode] = useState('')
+  
+  // State untuk Modal Tambah Barang Baru
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   const [editingBarcodeId, setEditingBarcodeId] = useState<string | null>(null)
   const [editingBarcodeValue, setEditingBarcodeValue] = useState('')
   const [savingBarcode, setSavingBarcode] = useState(false)
@@ -72,7 +76,6 @@ export default function ProductsPage() {
     setCurrentPage(1)
   }, [searchQuery, sortBy])
 
-  // ===== Ringkasan operasional warung =====
   const summary = useMemo(() => {
     const totalJenis = products.length
     const stokTipis = products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD).length
@@ -118,6 +121,7 @@ export default function ProductsPage() {
 
       if (res.ok) {
         setName(''); setStock(''); setPrice(''); setCostPrice(''); setUnit('pcs'); setBarcode('')
+        setIsModalOpen(false)
         stempel.show('Ditambahkan')
         await fetchProducts()
       } else {
@@ -230,197 +234,125 @@ export default function ProductsPage() {
   return (
     <DashboardShell>
       <Stempel visible={stempel.visible} label={stempel.label} />
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+      <div className="w-full pb-16 lg:pb-10">
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Stok Barang Warung</h1>
-          <p className="text-sm text-muted mt-1">Kelola dan pantau ketersediaan barang dengan mudah</p>
+        {/* ===================== HEADER ===================== */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-[24px] font-extrabold tracking-tight text-ink m-0">Stok Barang Warung</h1>
+            <p className="text-mu mt-1 text-[14px]">Kelola dan pantau ketersediaan barang dengan mudah</p>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-br hover:brightness-110 text-white px-4 py-2.5 rounded-[14px] text-[14px] font-bold transition-all shadow-[0_6px_14px_rgba(30,155,80,0.25)] shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Tambah Barang
+          </button>
         </div>
 
-        {/* ===== RINGKASAN ===== */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white shadow-sm rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted">Jenis Barang</span>
-              <div className="p-2 bg-primary-light rounded-lg"><Boxes className="w-4 h-4 text-primary" /></div>
+        {/* ===================== RINGKASAN (KPI) ===================== */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+          <div className="bg-card border border-ln rounded-[18px] p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold text-mu uppercase tracking-wider">Jenis Barang</span>
+              <div className="w-8 h-8 rounded-[10px] bg-so text-br flex items-center justify-center"><Boxes className="w-4 h-4" /></div>
             </div>
-            <p className="text-xl font-bold text-ink">{summary.totalJenis} Jenis</p>
+            <p className="text-[20px] font-extrabold text-ink">{summary.totalJenis} Jenis</p>
           </div>
-          <div className={`rounded-2xl p-5 shadow-sm ${summary.stokTipis > 0 ? 'bg-red-50' : 'bg-white'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-xs font-medium ${summary.stokTipis > 0 ? 'text-red-600' : 'text-muted'}`}>Stok Tipis</span>
-              <div className={`p-2 rounded-lg ${summary.stokTipis > 0 ? 'bg-red-100' : 'bg-primary-light'}`}>
-                <AlertTriangle className={`w-4 h-4 ${summary.stokTipis > 0 ? 'text-red-600' : 'text-primary'}`} />
+
+          <div className={`rounded-[18px] p-4 shadow-sm border ${summary.stokTipis > 0 ? 'bg-rs border-rd/30' : 'bg-card border-ln'}`}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold uppercase tracking-wider ${summary.stokTipis > 0 ? 'text-rd' : 'text-mu'}`}>Stok Tipis</span>
+              <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${summary.stokTipis > 0 ? 'bg-rd text-white' : 'bg-so text-br'}`}>
+                <AlertTriangle className="w-4 h-4" />
               </div>
             </div>
-            <p className={`text-xl font-bold ${summary.stokTipis > 0 ? 'text-red-600' : 'text-ink'}`}>{summary.stokTipis} Barang</p>
+            <p className={`text-[20px] font-extrabold ${summary.stokTipis > 0 ? 'text-rd' : 'text-ink'}`}>{summary.stokTipis} Barang</p>
           </div>
-          <div className="bg-white shadow-sm rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted">Total Nilai Stok</span>
-              <div className="p-2 bg-primary-light rounded-lg"><Wallet className="w-4 h-4 text-primary" /></div>
+
+          <div className="bg-card border border-ln rounded-[18px] p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold text-mu uppercase tracking-wider">Total Nilai Stok</span>
+              <div className="w-8 h-8 rounded-[10px] bg-so text-br flex items-center justify-center"><Wallet className="w-4 h-4" /></div>
             </div>
-            <p className="text-xl font-bold text-ink">{formatRupiah(summary.totalNilai)}</p>
+            <p className="text-[20px] font-extrabold text-ink">{formatRupiah(summary.totalNilai)}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* ===================== FILTER & PENCARIAN & DAFTAR BARANG (FULL WIDTH) ===================== */}
+        <div className="space-y-4">
 
-          {/* KOLOM KIRI: Form Tambah Barang */}
-          <div className="lg:col-span-1 sticky top-6">
-            <form onSubmit={handleAdd} className="bg-white shadow-sm rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold text-ink mb-2">Tambah Barang Baru</h3>
-
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Nama Barang (contoh: Indomie Goreng)"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={60}
-                  className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Stok Awal"
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
-                    className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
-                  />
-                  <select
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value)}
-                    className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors appearance-none text-ink"
-                  >
-                    {COMMON_UNITS.map((u) => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Harga Modal (Opsional)"
-                    value={costPrice}
-                    onChange={(e) => setCostPrice(e.target.value)}
-                    className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Harga Jual (Opsional)"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
-                  />
-                </div>
-                {Number(price) > 0 && Number(costPrice) > 0 && (
-                  <p className={`text-xs font-medium -mt-1 ml-1 ${Number(price) - Number(costPrice) >= 0 ? 'text-income' : 'text-red-600'}`}>
-                    Untung per satuan: {formatRupiah(Number(price) - Number(costPrice))}
-                  </p>
-                )}
-                <div className="relative">
-                  <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Barcode (opsional, bisa scan langsung)"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    className="w-full pl-9 pr-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors font-mono"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isPending || !name.trim()}
-                className="w-full mt-2 bg-primary hover:bg-primary-dark text-white rounded-xl py-3 text-sm font-bold transition-colors disabled:opacity-50 shadow-sm shadow-primary/30"
+          {/* Filter & Pencarian */}
+          <div className="bg-card border border-ln rounded-[18px] p-4 shadow-sm flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mu w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Cari nama barang..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors shadow-sm"
+              />
+            </div>
+            <div className="relative w-full sm:w-52">
+              <SlidersHorizontal className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mu w-4 h-4" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none appearance-none transition-colors cursor-pointer shadow-sm"
               >
-                {isPending ? 'Menyimpan...' : 'Simpan Barang'}
-              </button>
-            </form>
+                <option value="newest">Baru Ditambahkan</option>
+                <option value="name_asc">Nama (A-Z)</option>
+                <option value="stock_asc">Stok Paling Sedikit</option>
+                <option value="stock_desc">Stok Paling Banyak</option>
+              </select>
+            </div>
           </div>
 
-          {/* KOLOM KANAN: Daftar Stok Barang */}
-          <div className="lg:col-span-2">
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-6 bg-white p-3 rounded-2xl shadow-sm">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Cari nama barang..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-lavender/40 border border-transparent rounded-xl text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-colors"
-                />
-              </div>
-              <div className="relative w-full sm:w-48">
-                <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-lavender/40 border border-transparent rounded-xl text-sm focus:ring-2 focus:ring-primary/30 outline-none appearance-none transition-colors text-ink"
-                >
-                  <option value="newest">Baru Ditambahkan</option>
-                  <option value="name_asc">Nama (A-Z)</option>
-                  <option value="stock_asc">Stok Paling Sedikit</option>
-                  <option value="stock_desc">Stok Paling Banyak</option>
-                </select>
-              </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="animate-pulse bg-card border border-ln h-44 rounded-[18px] w-full"></div>
+              ))}
             </div>
+          ) : paginatedProducts.length === 0 ? (
+            <div className="bg-card border border-ln rounded-[18px] py-16 flex flex-col items-center justify-center text-center px-4">
+              <Package className="h-10 w-10 text-mu mb-2 opacity-40" />
+              <p className="text-ink font-bold text-sm">Tidak ada barang ditemukan</p>
+              <p className="text-mu text-xs mt-1">Coba sesuaikan kata kunci pencarian atau tambah barang baru.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {paginatedProducts.map((p) => {
+                  const isUpdating = updatingIds.has(p.id)
+                  const isDeleting = deletingId === p.id
+                  const isRestocking = restockingId === p.id
 
-            {loading ? (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="animate-pulse bg-white/60 h-32 rounded-2xl w-full"></div>
-                ))}
-              </div>
-            ) : paginatedProducts.length === 0 ? (
-              <div className="bg-white/60 border-2 border-dashed border-borderc rounded-2xl py-12 flex flex-col items-center justify-center text-center">
-                <Package className="h-10 w-10 text-borderc mb-2" />
-                <p className="text-muted text-sm">Tidak ada barang yang ditemukan.</p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {paginatedProducts.map((p) => {
-                    const isUpdating = updatingIds.has(p.id)
-                    const isDeleting = deletingId === p.id
-                    const isRestocking = restockingId === p.id
-
-                    return (
-                      <div
-                        key={p.id}
-                        className={`bg-white rounded-xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all ${isDeleting ? 'opacity-50' : ''}`}
-                      >
-                        <div className="flex justify-between items-start mb-4">
+                  return (
+                    <div
+                      key={p.id}
+                      className={`bg-card border border-ln rounded-[18px] p-4 sm:p-5 shadow-sm flex flex-col justify-between hover:border-br/50 transition-all ${isDeleting ? 'opacity-50' : ''}`}
+                    >
+                      <div>
+                        <div className="flex justify-between items-start gap-2 mb-2">
                           <div>
-                            <h3 className="font-bold text-ink text-base leading-tight mb-1">{p.name}</h3>
-                            <p className="text-sm text-muted font-medium">
-                              {Number(p.price) > 0 ? `Harga: ${formatRupiah(Number(p.price))}` : 'Harga belum diatur'}
+                            <h3 className="font-bold text-ink text-[15px] leading-snug mb-0.5">{p.name}</h3>
+                            <p className="text-[13px] font-bold text-br">
+                              {Number(p.price) > 0 ? formatRupiah(Number(p.price)) : 'Harga belum diatur'}
                             </p>
-                            {Number(p.price) > 0 && Number(p.cost_price) > 0 && (
-                              <p className={`text-xs font-semibold mt-0.5 ${Number(p.price) - Number(p.cost_price) >= 0 ? 'text-income' : 'text-red-600'}`}>
-                                Untung: {formatRupiah(Number(p.price) - Number(p.cost_price))} / satuan
-                              </p>
-                            )}
                           </div>
                           {p.stock <= LOW_STOCK_THRESHOLD && (
-                            <span className="px-2 py-0.5 bg-red-50 text-red-700 text-[10px] uppercase tracking-wider rounded-md font-bold whitespace-nowrap">
+                            <span className="px-2 py-0.5 bg-rs text-rd text-[10px] uppercase font-extrabold rounded-md shrink-0 border border-rd/20">
                               Stok Tipis
                             </span>
                           )}
                         </div>
 
-                        {/* Harga modal: lihat / edit inline */}
+                        {/* Harga Modal Inline Edit */}
                         <div className="mb-2">
                           {editingCostPriceId === p.id ? (
-                            <div className="flex items-center gap-1.5">
-                              <Wallet className="w-3.5 h-3.5 text-muted shrink-0" />
+                            <div className="flex items-center gap-1.5 mt-2">
                               <input
                                 autoFocus
                                 type="number"
@@ -432,18 +364,18 @@ export default function ProductsPage() {
                                   if (e.key === 'Escape') setEditingCostPriceId(null)
                                 }}
                                 placeholder="Harga modal"
-                                className="min-w-0 flex-1 px-2 py-1 bg-lavender/40 rounded-md text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                                className="min-w-0 flex-1 px-3 py-1.5 bg-card border border-ln rounded-[10px] text-xs text-ink font-bold outline-none focus:border-br"
                               />
                               <button
                                 onClick={() => handleSaveCostPrice(p.id)}
                                 disabled={savingCostPrice}
-                                className="p-1 text-primary hover:bg-primary-light rounded transition-colors shrink-0"
+                                className="p-1.5 bg-br text-white rounded-lg transition-colors shrink-0"
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => setEditingCostPriceId(null)}
-                                className="p-1 text-muted hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0"
+                                className="p-1.5 bg-bg border border-ln text-mu hover:text-rd rounded-lg transition-colors shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -454,24 +386,23 @@ export default function ProductsPage() {
                                 setEditingCostPriceId(p.id)
                                 setEditingCostPriceValue(p.cost_price ? String(p.cost_price) : '')
                               }}
-                              className="flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors group"
+                              className="flex items-center gap-1.5 text-xs text-mu hover:text-br transition-colors group py-0.5"
                             >
                               <Wallet className="w-3.5 h-3.5 shrink-0" />
                               {Number(p.cost_price) > 0 ? (
-                                <span>Modal: {formatRupiah(Number(p.cost_price))}</span>
+                                <span className="font-semibold">Modal: {formatRupiah(Number(p.cost_price))}</span>
                               ) : (
-                                <span className="italic">Belum ada harga modal</span>
+                                <span className="italic">Atur harga modal</span>
                               )}
                               <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
                           )}
                         </div>
 
-                        {/* Barcode: lihat / edit inline */}
+                        {/* Barcode Inline Edit */}
                         <div className="mb-3">
                           {editingBarcodeId === p.id ? (
-                            <div className="flex items-center gap-1.5">
-                              <Barcode className="w-3.5 h-3.5 text-muted shrink-0" />
+                            <div className="flex items-center gap-1.5 mt-2">
                               <input
                                 autoFocus
                                 type="text"
@@ -481,19 +412,19 @@ export default function ProductsPage() {
                                   if (e.key === 'Enter') handleSaveBarcode(p.id)
                                   if (e.key === 'Escape') setEditingBarcodeId(null)
                                 }}
-                                placeholder="Scan atau ketik barcode"
-                                className="min-w-0 flex-1 px-2 py-1 bg-lavender/40 rounded-md text-xs font-mono outline-none focus:ring-2 focus:ring-primary/30"
+                                placeholder="Ketik barcode"
+                                className="min-w-0 flex-1 px-3 py-1.5 bg-card border border-ln rounded-[10px] text-xs text-ink font-mono outline-none focus:border-br"
                               />
                               <button
                                 onClick={() => handleSaveBarcode(p.id)}
                                 disabled={savingBarcode}
-                                className="p-1 text-primary hover:bg-primary-light rounded transition-colors shrink-0"
+                                className="p-1.5 bg-br text-white rounded-lg transition-colors shrink-0"
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => setEditingBarcodeId(null)}
-                                className="p-1 text-muted hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0"
+                                className="p-1.5 bg-bg border border-ln text-mu hover:text-rd rounded-lg transition-colors shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -504,116 +435,231 @@ export default function ProductsPage() {
                                 setEditingBarcodeId(p.id)
                                 setEditingBarcodeValue(p.barcode || '')
                               }}
-                              className="flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors group"
+                              className="flex items-center gap-1.5 text-xs text-mu hover:text-br transition-colors group py-0.5"
                             >
                               <Barcode className="w-3.5 h-3.5 shrink-0" />
                               {p.barcode ? (
-                                <span className="font-mono">{p.barcode}</span>
+                                <span className="font-mono font-semibold">{p.barcode}</span>
                               ) : (
-                                <span className="italic">Belum ada barcode</span>
+                                <span className="italic">Tambah barcode</span>
                               )}
                               <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
                           )}
                         </div>
+                      </div>
 
-                        <div className="border-t border-lavender pt-3 mt-auto space-y-3">
-                          <div className="flex items-end justify-between">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-2xl font-black text-primary tabular-nums">{p.stock}</span>
-                              <span className="text-xs font-medium text-muted">{p.unit}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-0.5 bg-lavender/50 p-1 rounded-lg">
-                                <button
-                                  onClick={() => handleUpdateStock(p.id, -1)}
-                                  disabled={isUpdating || p.stock <= 0}
-                                  className="p-1.5 text-muted hover:text-ink hover:bg-white hover:shadow-sm rounded-md transition-all disabled:opacity-40"
-                                >
-                                  <MinusCircle className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateStock(p.id, 1)}
-                                  disabled={isUpdating}
-                                  className="p-1.5 text-muted hover:text-ink hover:bg-white hover:shadow-sm rounded-md transition-all disabled:opacity-40"
-                                >
-                                  <PlusCircle className="w-4 h-4" />
-                                </button>
-                              </div>
-                              <button
-                                onClick={() => setRestockingId(isRestocking ? null : p.id)}
-                                className="p-2 text-primary hover:bg-primary-light rounded-lg transition-colors"
-                                title="Restock banyak sekaligus"
-                              >
-                                <PackagePlus className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(p.id)}
-                                disabled={isDeleting}
-                                className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                      {/* Kontrol Stok */}
+                      <div className="border-t border-ln pt-3 mt-auto space-y-3">
+                        <div className="flex items-end justify-between">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-[22px] font-extrabold text-ink tabular-nums">{p.stock}</span>
+                            <span className="text-xs font-bold text-mu">{p.unit}</span>
                           </div>
 
-                          {isRestocking && (
-                            <div className="flex items-center gap-2 bg-primary-light rounded-lg p-2">
-                              <input
-                                type="number"
-                                min={1}
-                                autoFocus
-                                placeholder={`Tambah berapa ${p.unit}?`}
-                                value={restockAmount}
-                                onChange={(e) => setRestockAmount(e.target.value)}
-                                className="flex-1 px-3 py-1.5 bg-white rounded-md text-sm outline-none"
-                              />
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-0.5 bg-bg border border-ln p-1 rounded-[12px]">
                               <button
-                                onClick={() => handleBulkRestock(p.id)}
-                                className="bg-primary text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-primary-dark transition-colors"
+                                onClick={() => handleUpdateStock(p.id, -1)}
+                                disabled={isUpdating || p.stock <= 0}
+                                className="w-7 h-7 flex items-center justify-center text-ink hover:bg-so rounded-lg transition-colors disabled:opacity-40"
                               >
-                                Tambah
+                                <MinusCircle className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => { setRestockingId(null); setRestockAmount('') }}
-                                className="text-muted px-2 py-1.5 text-xs font-medium"
+                                onClick={() => handleUpdateStock(p.id, 1)}
+                                disabled={isUpdating}
+                                className="w-7 h-7 flex items-center justify-center text-ink hover:bg-so rounded-lg transition-colors disabled:opacity-40"
                               >
-                                Batal
+                                <PlusCircle className="w-4 h-4" />
                               </button>
                             </div>
-                          )}
+                            <button
+                              onClick={() => setRestockingId(isRestocking ? null : p.id)}
+                              className="w-9 h-9 bg-so border border-br/20 text-br hover:bg-br hover:text-white rounded-[12px] flex items-center justify-center transition-colors shadow-sm"
+                              title="Restock cepat"
+                            >
+                              <PackagePlus className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(p.id)}
+                              disabled={isDeleting}
+                              className="w-9 h-9 bg-rs border border-rd/20 text-rd hover:bg-rd hover:text-white rounded-[12px] flex items-center justify-center transition-colors disabled:opacity-50"
+                              title="Hapus produk"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
+
+                        {isRestocking && (
+                          <div className="flex items-center gap-2 bg-bg border border-ln rounded-[14px] p-2">
+                            <input
+                              type="number"
+                              min={1}
+                              autoFocus
+                              placeholder={`Tambah ${p.unit}...`}
+                              value={restockAmount}
+                              onChange={(e) => setRestockAmount(e.target.value)}
+                              className="flex-1 px-3 py-2 bg-card border border-ln rounded-[10px] text-xs font-bold text-ink outline-none focus:border-br"
+                            />
+                            <button
+                              onClick={() => handleBulkRestock(p.id)}
+                              className="bg-br hover:brightness-110 text-white px-3.5 py-2 rounded-[10px] text-xs font-bold transition-all shadow-sm"
+                            >
+                              Tambah
+                            </button>
+                            <button
+                              onClick={() => { setRestockingId(null); setRestockAmount('') }}
+                              className="text-mu hover:text-ink px-2 py-2 text-xs font-bold transition-colors"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )
-                  })}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-5 bg-card border border-ln p-4 rounded-[18px] shadow-sm">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    className="flex items-center gap-1 px-3.5 py-2 text-xs font-bold text-ink bg-bg border border-ln hover:bg-so rounded-[10px] transition-colors disabled:opacity-50"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Sebelumnya
+                  </button>
+                  <span className="text-xs font-bold text-mu">
+                    Halaman <span className="text-ink">{currentPage}</span> dari {totalPages}
+                  </span>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    className="flex items-center gap-1 px-3.5 py-2 text-xs font-bold text-ink bg-bg border border-ln hover:bg-so rounded-[10px] transition-colors disabled:opacity-50"
+                  >
+                    Berikutnya <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+        </div>
+
+        {/* ===================== MODAL TAMBAH BARANG BARU ===================== */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card border border-ln rounded-[22px] w-full max-w-lg p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-ln">
+                <h2 className="text-[18px] font-extrabold text-ink m-0">Tambah Barang Baru</h2>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-bg border border-ln flex items-center justify-center text-mu hover:text-ink hover:bg-so transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAdd} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-ink mb-1.5">Nama barang</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Indomie Goreng"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={60}
+                    className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors"
+                  />
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6 bg-white p-3 rounded-2xl shadow-sm">
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage((p) => p - 1)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-ink bg-lavender/50 hover:bg-lavender rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <ChevronLeft className="w-4 h-4" /> Prev
-                    </button>
-                    <span className="text-sm font-medium text-muted">
-                      Hal <span className="text-ink">{currentPage}</span> dari {totalPages}
-                    </span>
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage((p) => p + 1)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-ink bg-lavender/50 hover:bg-lavender rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Next <ChevronRight className="w-4 h-4" />
-                    </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-ink mb-1.5">Stok awal</label>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={stock}
+                      onChange={(e) => setStock(e.target.value)}
+                      className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors"
+                    />
                   </div>
+                  <div>
+                    <label className="block text-xs font-bold text-ink mb-1.5">Satuan</label>
+                    <select
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors appearance-none cursor-pointer"
+                    >
+                      {COMMON_UNITS.map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-ink mb-1.5">Harga modal</label>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Rp 0"
+                      value={costPrice}
+                      onChange={(e) => setCostPrice(e.target.value)}
+                      className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-ink mb-1.5">Harga jual</label>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Rp 0"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {Number(price) > 0 && Number(costPrice) > 0 && (
+                  <p className={`text-xs font-bold px-1 ${Number(price) - Number(costPrice) >= 0 ? 'text-br' : 'text-rd'}`}>
+                    Estimasi untung: {formatRupiah(Number(price) - Number(costPrice))} per satuan
+                  </p>
                 )}
-              </>
-            )}
+
+                <div>
+                  <label className="block text-xs font-bold text-ink mb-1.5">Barcode (Opsional)</label>
+                  <div className="relative">
+                    <Barcode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mu w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Scan atau ketik barcode..."
+                      value={barcode}
+                      onChange={(e) => setBarcode(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isPending || !name.trim()}
+                  className="w-full mt-2 bg-br hover:brightness-110 text-white rounded-[14px] py-3.5 text-sm font-bold transition-all disabled:opacity-50 flex justify-center items-center gap-2 shadow-[0_6px_14px_rgba(30,155,80,0.25)]"
+                >
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {isPending ? 'Menyimpan...' : 'Simpan Barang'}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
+
       </div>
     </DashboardShell>
   )

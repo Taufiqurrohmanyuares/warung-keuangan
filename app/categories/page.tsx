@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import DashboardShell from '@/components/DashboardShell'
 import { Stempel, useStempel } from '@/components/Stempel'
-import { Tag, Trash2, PlusCircle, MinusCircle, Search, AlertCircle, Receipt } from 'lucide-react'
+import { Tag, Trash2, PlusCircle, MinusCircle, Search, AlertCircle, Receipt, Plus } from 'lucide-react'
 
 type Category = {
   id: string
@@ -26,6 +26,8 @@ type CategoryWithStats = Category & {
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
+
+const SUGGESTIONS = ['Gas Elpiji', 'Listrik/Air', 'Token', 'Belanja Sembako', 'Rokok']
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -61,7 +63,6 @@ export default function CategoriesPage() {
     fetchData()
   }, [])
 
-  // ===== Hitung jumlah transaksi & total nilai bulan ini, per nama kategori =====
   const categoriesWithStats: CategoryWithStats[] = useMemo(() => {
     const now = new Date()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -78,18 +79,16 @@ export default function CategoriesPage() {
     })
   }, [categories, transactions])
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleAdd(submitName?: string) {
+    const targetName = (submitName !== undefined ? submitName : name).trim()
+    if (!targetName) return
     setFormError('')
 
-    const trimmedName = name.trim()
-    if (!trimmedName) return
-
     const isDuplicate = categories.some(
-      (c) => c.type === type && c.name.toLowerCase() === trimmedName.toLowerCase()
+      (c) => c.type === type && c.name.toLowerCase() === targetName.toLowerCase()
     )
     if (isDuplicate) {
-      setFormError(`Kategori "${trimmedName}" sudah ada di ${type === 'income' ? 'Pemasukan' : 'Pengeluaran'}`)
+      setFormError(`Kategori "${targetName}" sudah ada`)
       return
     }
 
@@ -97,7 +96,7 @@ export default function CategoriesPage() {
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmedName, type }),
+        body: JSON.stringify({ name: targetName, type }),
       })
 
       if (res.ok) {
@@ -105,7 +104,7 @@ export default function CategoriesPage() {
         stempel.show('Ditambahkan')
         await fetchData()
       } else {
-        setFormError('Gagal menambah kategori, coba lagi')
+        setFormError('Gagal menambah kategori')
       }
     })
   }
@@ -139,145 +138,139 @@ export default function CategoriesPage() {
   return (
     <DashboardShell>
       <Stempel visible={stempel.visible} label={stempel.label} />
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+      <div className="w-full pb-16 lg:pb-10">
 
+        {/* ===================== HEADER ===================== */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Kelola Kategori</h1>
-          <p className="text-sm text-muted mt-1">Tambah kategori pemasukan atau pengeluaran sesuai kebutuhan warung Anda</p>
+          <h1 className="text-[24px] font-extrabold tracking-tight text-ink m-0">Kategori</h1>
+          <p className="text-mu mt-1 text-[14px]">Kelompok pemasukan & pengeluaran</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-          {/* KOLOM KIRI: Form Tambah Kategori */}
+          {/* ===================== KOLOM KIRI: FORM KATEGORI BARU ===================== */}
           <div className="lg:col-span-1 sticky top-6">
-            <form onSubmit={handleAdd} className="bg-white shadow-sm rounded-2xl p-6 space-y-5">
-              <h2 className="text-lg font-bold text-ink">Kategori Baru</h2>
+            <div className="bg-card border border-ln rounded-[22px] p-6 shadow-sm space-y-5">
+              <h2 className="text-[17px] font-extrabold text-ink m-0">Kategori baru</h2>
 
-              <div className="flex p-1 bg-lavender/60 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => { setType('expense'); setFormError('') }}
-                  disabled={isPending}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'expense' ? 'bg-white text-red-600 shadow-sm' : 'text-muted hover:text-ink'}`}
-                >
-                  Pengeluaran
-                </button>
+              {/* Pilihan Jenis */}
+              <div className="flex p-1 bg-bg border border-ln rounded-[14px]">
                 <button
                   type="button"
                   onClick={() => { setType('income'); setFormError('') }}
                   disabled={isPending}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'income' ? 'bg-white text-green-600 shadow-sm' : 'text-muted hover:text-ink'}`}
+                  className={`flex-1 py-2.5 rounded-[10px] text-xs font-bold transition-all ${type === 'income' ? 'bg-card text-br shadow-sm border border-br/30' : 'text-mu hover:text-ink'}`}
                 >
                   Pemasukan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setType('expense'); setFormError('') }}
+                  disabled={isPending}
+                  className={`flex-1 py-2.5 rounded-[10px] text-xs font-bold transition-all ${type === 'expense' ? 'bg-card text-rd shadow-sm border border-rd/30' : 'text-mu hover:text-ink'}`}
+                >
+                  Pengeluaran
                 </button>
               </div>
 
               <div>
+                <label className="block text-xs font-extrabold text-ink mb-2">Nama kategori</label>
                 <input
                   type="text"
-                  placeholder="Nama (cth: Rokok & Token)"
+                  placeholder="Contoh: Jasa Titip"
                   value={name}
                   onChange={(e) => { setName(e.target.value); setFormError('') }}
                   disabled={isPending}
                   maxLength={50}
-                  className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors disabled:opacity-60"
+                  className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors disabled:opacity-60"
                 />
                 {formError && (
-                  <p className="text-red-500 text-xs mt-1.5 ml-1 flex items-center gap-1">
+                  <p className="text-rd text-xs mt-1.5 ml-1 font-semibold flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" /> {formError}
                   </p>
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={isPending || !name.trim()}
-                className="w-full bg-primary hover:bg-primary-dark text-white rounded-xl py-3 text-sm font-bold transition-colors disabled:opacity-50 shadow-sm shadow-primary/30"
-              >
-                {isPending ? 'Menambahkan...' : 'Tambah Kategori Baru'}
-              </button>
-
-              <div className="pt-4 border-t border-lavender">
-                <p className="text-xs text-muted leading-relaxed">
-                  💡 Contoh kategori umum warung Madura/kelontong:<br/>
-                  <span className="text-ink font-medium">Pengeluaran:</span> Belanja Sembako, Rokok & Token, Gas Elpiji, Listrik/Air<br/>
-                  <span className="text-ink font-medium">Pemasukan:</span> Penjualan Harian, Jasa Titip, Token & Pulsa
-                </p>
-              </div>
-            </form>
-          </div>
-
-          {/* KOLOM KANAN: Daftar Kategori */}
-          <div className="lg:col-span-2">
-
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-ink">Daftar Kategori Anda</h2>
-              <div className="relative w-full max-w-[220px]">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-muted" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Cari kategori..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
-                />
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="animate-pulse bg-white/60 h-20 rounded-xl w-full"></div>
+              {/* Rekomendasi / Saran Pill */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {SUGGESTIONS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => { setName(item); handleAdd(item); }}
+                    className="px-3 py-1.5 bg-bg hover:bg-so border border-ln rounded-[10px] text-xs font-bold text-ink transition-colors"
+                  >
+                    + {item}
+                  </button>
                 ))}
               </div>
-            ) : fetchError ? (
-              <div className="bg-red-50 rounded-2xl py-12 text-center text-sm text-red-600 flex flex-col items-center justify-center">
-                <AlertCircle className="w-8 h-8 mb-2" />
-                <p>Gagal memuat kategori.</p>
-                <button onClick={() => { setLoading(true); fetchData() }} className="mt-3 text-primary font-medium underline text-sm">
-                  Coba lagi
-                </button>
-              </div>
-            ) : categories.length === 0 ? (
-              <div className="bg-white/60 border-2 border-dashed border-borderc rounded-2xl py-12 text-center text-sm text-muted flex flex-col items-center justify-center">
-                <Tag className="w-8 h-8 text-borderc mb-2" />
-                <p>Belum ada kategori kustom.<br/>Silakan tambah melalui form di samping.</p>
-              </div>
-            ) : filteredCategories.length === 0 ? (
-              <div className="bg-white/60 border-2 border-dashed border-borderc rounded-2xl py-12 text-center text-sm text-muted">
-                <p>Tidak ada kategori yang cocok dengan pencarian "{searchQuery}"</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {expenseCategories.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2.5">
-                      Pengeluaran ({expenseCategories.length})
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {expenseCategories.map((c) => (
-                        <CategoryCard key={c.id} category={c} onDelete={handleDelete} deleting={deletingId === c.id} />
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {incomeCategories.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2.5">
-                      Pemasukan ({incomeCategories.length})
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {incomeCategories.map((c) => (
-                        <CategoryCard key={c.id} category={c} onDelete={handleDelete} deleting={deletingId === c.id} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <button
+                type="button"
+                onClick={() => handleAdd()}
+                disabled={isPending || !name.trim()}
+                className="w-full bg-br hover:brightness-110 text-white rounded-[14px] py-4 text-sm font-bold transition-all disabled:opacity-50 shadow-[0_6px_14px_rgba(30,155,80,0.25)] flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {isPending ? 'Menambahkan...' : 'Tambah Kategori'}
+              </button>
+            </div>
+          </div>
+
+          {/* ===================== KOLOM KANAN: DAFTAR KATEGORI ===================== */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Kotak Pemasukan */}
+            <div className="bg-card border border-ln rounded-[22px] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-ln">
+                <h3 className="text-[16px] font-extrabold text-ink m-0">Pemasukan</h3>
+                <span className="w-7 h-7 rounded-full bg-so text-br font-extrabold text-xs flex items-center justify-center border border-br/20">
+                  {incomeCategories.length}
+                </span>
               </div>
-            )}
+
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="animate-pulse bg-bg border border-ln h-16 rounded-[14px] w-full" />
+                  ))}
+                </div>
+              ) : incomeCategories.length === 0 ? (
+                <p className="text-xs text-mu py-4 italic">Belum ada kategori pemasukan. Pakai saran di form untuk memulai.</p>
+              ) : (
+                <div className="space-y-3">
+                  {incomeCategories.map((c) => (
+                    <CategoryRow key={c.id} category={c} onDelete={handleDelete} deleting={deletingId === c.id} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Kotak Pengeluaran */}
+            <div className="bg-card border border-ln rounded-[22px] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-ln">
+                <h3 className="text-[16px] font-extrabold text-ink m-0">Pengeluaran</h3>
+                <span className="w-7 h-7 rounded-full bg-rs text-rd font-extrabold text-xs flex items-center justify-center border border-rd/20">
+                  {expenseCategories.length}
+                </span>
+              </div>
+
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="animate-pulse bg-bg border border-ln h-16 rounded-[14px] w-full" />
+                  ))}
+                </div>
+              ) : expenseCategories.length === 0 ? (
+                <p className="text-xs text-mu py-4 italic">Belum ada kategori pengeluaran. Pakai saran di form untuk memulai.</p>
+              ) : (
+                <div className="space-y-3">
+                  {expenseCategories.map((c) => (
+                    <CategoryRow key={c.id} category={c} onDelete={handleDelete} deleting={deletingId === c.id} />
+                  ))}
+                </div>
+              )}
+            </div>
 
           </div>
         </div>
@@ -286,42 +279,31 @@ export default function CategoriesPage() {
   )
 }
 
-function CategoryCard({
+function CategoryRow({
   category, onDelete, deleting,
 }: { category: CategoryWithStats; onDelete: (id: string) => void; deleting: boolean }) {
   return (
-    <div className={`bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all ${deleting ? 'opacity-50' : ''}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={`p-2.5 rounded-lg shrink-0 ${category.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-            {category.type === 'income' ? <PlusCircle className="w-5 h-5" /> : <MinusCircle className="w-5 h-5" />}
-          </div>
-          <p className="text-sm font-bold text-ink truncate">{category.name}</p>
+    <div className={`bg-bg border border-ln rounded-[14px] p-4 flex items-center justify-between gap-3 shadow-sm hover:border-br/40 transition-all ${deleting ? 'opacity-50' : ''}`}>
+      <div className="flex items-center gap-3.5 min-w-0">
+        <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${category.type === 'income' ? 'bg-so text-br border border-br/20' : 'bg-rs text-rd border border-rd/20'}`}>
+          {category.type === 'income' ? <PlusCircle className="w-4 h-4" /> : <MinusCircle className="w-4 h-4" />}
         </div>
-        <button
-          onClick={() => onDelete(category.id)}
-          disabled={deleting}
-          className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none disabled:opacity-50 shrink-0"
-          title="Hapus Kategori"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="min-w-0">
+          <p className="text-sm font-extrabold text-ink truncate">{category.name}</p>
+          <p className="text-xs text-mu mt-0.5">
+            {category.monthlyCount > 0 ? `${category.monthlyCount} transaksi · ${formatRupiah(category.monthlyTotal)}` : 'Belum ada transaksi bulan ini'}
+          </p>
+        </div>
       </div>
 
-      <div className="bg-lavender/40 rounded-lg px-3 py-2.5 flex items-center justify-between">
-        {category.monthlyCount > 0 ? (
-          <>
-            <span className="text-xs text-muted flex items-center gap-1.5">
-              <Receipt className="w-3.5 h-3.5" /> {category.monthlyCount} transaksi bulan ini
-            </span>
-            <span className={`text-sm font-bold ${category.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-              {formatRupiah(category.monthlyTotal)}
-            </span>
-          </>
-        ) : (
-          <span className="text-xs text-muted">Belum ada transaksi bulan ini</span>
-        )}
-      </div>
+      <button
+        onClick={() => onDelete(category.id)}
+        disabled={deleting}
+        className="w-9 h-9 rounded-[10px] bg-card border border-ln text-mu hover:text-rd hover:bg-rs flex items-center justify-center transition-colors shrink-0"
+        title="Hapus Kategori"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   )
 }

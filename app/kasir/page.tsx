@@ -46,14 +46,12 @@ export default function KasirPage() {
   const [receiptData, setReceiptData] = useState<any>(null)
   const stempel = useStempel()
 
-  // ===== Scan barcode (manual / scanner USB) =====
   const [barcodeInput, setBarcodeInput] = useState('')
   const [scanError, setScanError] = useState('')
   const barcodeRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const paidInputRef = useRef<HTMLInputElement>(null)
 
-  // ===== Pembayaran =====
   const [step, setStep] = useState<'cart' | 'payment'>('cart')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [paidAmountInput, setPaidAmountInput] = useState('')
@@ -75,8 +73,6 @@ export default function KasirPage() {
   }, [])
 
   useEffect(() => {
-    // Auto-fokus ke kolom barcode cuma di layar besar (laptop/PC pakai scanner USB).
-    // Di HP sengaja tidak di-fokus otomatis biar keyboard on-screen tidak langsung muncul.
     if (window.matchMedia('(min-width: 1024px)').matches) {
       barcodeRef.current?.focus()
     }
@@ -132,7 +128,6 @@ export default function KasirPage() {
 
   const total = useMemo(() => cart.reduce((sum, i) => sum + i.qty * i.price, 0), [cart])
 
-  // ===== Scan barcode: cari produk lalu masukkan ke keranjang =====
   function lookupAndAddByBarcode(codeRaw: string): { ok: true; name: string } | { ok: false; message: string } {
     const code = codeRaw.trim()
     if (!code) return { ok: false, message: 'Barcode kosong' }
@@ -162,7 +157,6 @@ export default function KasirPage() {
     }
   }
 
-  // ===== Kalkulator kembalian =====
   const paidAmount = useMemo(() => {
     if (paymentMethod !== 'cash') return total
     const n = Number(paidAmountInput)
@@ -216,7 +210,7 @@ export default function KasirPage() {
 
       stempel.show('Terjual')
       setReceiptData({
-        storeName: 'Buku Warung',
+        storeName: 'Warung Keuangan',
         items: cart.map((i) => ({ name: i.name, qty: i.qty, price: i.price })),
         total,
         date: new Date(),
@@ -239,7 +233,6 @@ export default function KasirPage() {
     }
   }
 
-  // ===== Shortcut keyboard (khusus laptop/PC — otomatis tidak berlaku di HP): F2 cari, F3 barcode manual, F4 kosongkan, F9 bayar, Esc kembali =====
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (receiptData) return
 
@@ -267,7 +260,6 @@ export default function KasirPage() {
         backToCart()
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, cart, canConfirmPayment, isCheckingOut, receiptData])
 
   useEffect(() => {
@@ -284,57 +276,61 @@ export default function KasirPage() {
   return (
     <DashboardShell>
       <Stempel visible={stempel.visible} label={stempel.label} />
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full pb-8 lg:pb-24">
+      <div className="w-full pb-16 lg:pb-10">
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Kasir</h1>
-          <p className="text-sm text-muted mt-1">Scan barcode atau klik barang — otomatis tercatat sebagai transaksi</p>
+        {/* ===================== HEADER ===================== */}
+        <div className="mb-5">
+          <h1 className="text-[24px] font-extrabold tracking-tight text-ink m-0">Kasir Toko</h1>
+          <p className="text-mu mt-1 text-[14px]">Scan barcode atau pilih barang untuk mencatat transaksi secara instan</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
-          {/* KOLOM KIRI: Scan + Daftar Produk */}
-          <div className="lg:col-span-2">
+          {/* ===================== KOLOM KIRI: SCAN & PRODUK ===================== */}
+          <div className="lg:col-span-2 space-y-4">
 
-            {/* Scan barcode (manual / scanner USB) */}
-            <form onSubmit={handleBarcodeSubmit} className="mb-3">
-              <div className={`relative rounded-xl transition-all ${scanError ? 'ring-2 ring-red-400' : 'focus-within:ring-2 focus-within:ring-primary/40'}`}>
-                <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 text-primary w-5 h-5" />
+            {/* Input Barcode */}
+            <form onSubmit={handleBarcodeSubmit}>
+              <div className={`relative rounded-[14px] transition-all bg-card border ${scanError ? 'border-rd' : 'border-ln focus-within:border-br'}`}>
+                <ScanBarcode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-br w-5 h-5" />
                 <input
                   ref={barcodeRef}
                   type="text"
-                  placeholder="Scan atau ketik barcode barang..."
+                  placeholder="Scan barcode barang atau ketik manual..."
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3.5 bg-white rounded-xl text-sm font-mono outline-none shadow-sm"
+                  className="w-full pl-11 pr-4 py-3 bg-transparent rounded-[14px] text-sm font-mono text-ink outline-none"
                   autoComplete="off"
                 />
               </div>
-              {scanError && <p className="text-xs text-red-600 font-medium mt-1.5 ml-1">{scanError}</p>}
+              {scanError && <p className="text-xs text-rd font-medium mt-1.5 ml-1">{scanError}</p>}
             </form>
 
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
+            {/* Kolom Cari Nama Barang */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mu w-4 h-4" />
               <input
                 ref={searchRef}
                 type="text"
-                placeholder="Atau cari nama barang..."
+                placeholder="Cari berdasarkan nama barang..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-3 bg-white rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
+                className="w-full pl-10 pr-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors shadow-sm"
               />
             </div>
 
+            {/* Daftar Produk Grid */}
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="animate-pulse bg-white/60 h-24 rounded-xl w-full"></div>
+                  <div key={i} className="animate-pulse bg-card border border-ln h-[100px] rounded-[16px] w-full"></div>
                 ))}
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="bg-white/60 border-2 border-dashed border-borderc rounded-2xl py-12 flex flex-col items-center justify-center text-center">
-                <Package className="h-10 w-10 text-borderc mb-2" />
-                <p className="text-muted text-sm">Tidak ada barang yang cocok. Tambah dulu di halaman Stok.</p>
+              <div className="bg-card border border-ln rounded-[18px] py-14 flex flex-col items-center justify-center text-center px-4">
+                <Package className="h-10 w-10 text-mu mb-2 opacity-50" />
+                <p className="text-ink font-bold text-sm">Barang tidak ditemukan</p>
+                <p className="text-mu text-xs mt-1">Pastikan Anda sudah menambahkan produk di menu Stok.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -343,33 +339,37 @@ export default function KasirPage() {
                     key={p.id}
                     onClick={() => addToCart(p)}
                     disabled={p.stock <= 0}
-                    className="bg-white rounded-xl p-3.5 text-left shadow-sm hover:shadow-md hover:ring-2 hover:ring-primary/30 transition-all disabled:opacity-40 disabled:hover:ring-0 disabled:hover:shadow-sm"
+                    className="bg-card border border-ln rounded-[16px] p-3.5 text-left shadow-sm hover:border-br hover:bg-so/40 transition-all disabled:opacity-40 disabled:hover:border-ln disabled:hover:bg-card flex flex-col justify-between"
                   >
-                    <p className="text-sm font-bold text-ink leading-tight mb-1 line-clamp-2">{p.name}</p>
-                    <p className="text-xs text-muted mb-2">{formatRupiah(p.price)}</p>
-                    <p className={`text-[11px] font-medium ${p.stock <= 3 ? 'text-red-600' : 'text-primary'}`}>
-                      Stok: {p.stock} {p.unit}
-                    </p>
+                    <div>
+                      <p className="text-[13px] font-bold text-ink leading-snug mb-1 line-clamp-2">{p.name}</p>
+                      <p className="text-[12px] font-bold text-br">{formatRupiah(p.price)}</p>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-ln/60 flex items-center justify-between">
+                      <span className={`text-[11px] font-bold ${p.stock <= 3 ? 'text-rd' : 'text-mu'}`}>
+                        Stok: {p.stock} {p.unit}
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* KOLOM KANAN: Keranjang / Pembayaran */}
+          {/* ===================== KOLOM KANAN: KERANJANG & PEMBAYARAN ===================== */}
           <div className="lg:col-span-1 sticky top-6">
-            <div className="bg-white rounded-2xl shadow-sm p-5">
+            <div className="bg-card border border-ln rounded-[18px] p-5 shadow-sm">
 
               {step === 'cart' ? (
                 <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                      <ShoppingCart className="w-4 h-4 text-primary" /> Keranjang
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-ln">
+                    <h2 className="text-[15px] font-bold text-ink flex items-center gap-2 m-0">
+                      <ShoppingCart className="w-4 h-4 text-br" /> Keranjang Belanja
                     </h2>
                     {cart.length > 0 && (
                       <button
                         onClick={clearCart}
-                        className="text-xs font-medium text-muted hover:text-red-600 transition-colors flex items-center gap-1"
+                        className="text-xs font-bold text-rd hover:underline flex items-center gap-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Kosongkan
                       </button>
@@ -377,76 +377,80 @@ export default function KasirPage() {
                   </div>
 
                   {cart.length === 0 ? (
-                    <p className="text-sm text-muted text-center py-8">Scan barcode atau klik barang di sebelah kiri untuk menambah ke keranjang</p>
+                    <div className="py-12 text-center">
+                      <ShoppingCart className="w-10 h-10 text-mu/30 mx-auto mb-2" />
+                      <p className="text-sm text-mu font-medium">Keranjang masih kosong</p>
+                      <p className="text-xs text-mu/70 mt-0.5">Pilih produk di samping untuk mulai transaksi.</p>
+                    </div>
                   ) : (
                     <>
-                      <div className="space-y-3 mb-4 max-h-80 overflow-y-auto pr-1">
+                      <div className="space-y-2.5 mb-4 max-h-[320px] overflow-y-auto pr-1">
                         {cart.map((item) => (
-                          <div key={item.product_id} className="flex items-center justify-between gap-2 bg-lavender/40 rounded-lg p-2.5">
+                          <div key={item.product_id} className="flex items-center justify-between gap-2 bg-bg rounded-[12px] p-2.5 border border-ln/60">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-ink truncate">{item.name}</p>
-                              <p className="text-xs text-muted">{formatRupiah(item.price)}</p>
+                              <p className="text-[13px] font-bold text-ink truncate">{item.name}</p>
+                              <p className="text-[11px] text-mu">{formatRupiah(item.price)}</p>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <button
                                 onClick={() => updateQty(item.product_id, -1)}
-                                className="p-1 text-muted hover:text-ink hover:bg-white rounded transition-colors"
+                                className="w-7 h-7 bg-card border border-ln text-ink rounded-lg flex items-center justify-center hover:bg-so transition-colors"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
                               <span className="text-sm font-bold text-ink w-5 text-center">{item.qty}</span>
                               <button
                                 onClick={() => updateQty(item.product_id, 1)}
-                                className="p-1 text-muted hover:text-ink hover:bg-white rounded transition-colors"
+                                className="w-7 h-7 bg-card border border-ln text-ink rounded-lg flex items-center justify-center hover:bg-so transition-colors"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => removeFromCart(item.product_id)}
-                                className="p-1 text-muted hover:text-red-600 hover:bg-white rounded transition-colors ml-1"
+                                className="p-1.5 text-mu hover:text-rd transition-colors ml-0.5"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
                         ))}
                       </div>
 
-                      <div className="border-t border-lavender pt-4 mb-4">
+                      <div className="border-t border-ln pt-3.5 mb-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-muted">Total</span>
-                          <span className="text-xl font-black text-primary">{formatRupiah(total)}</span>
+                          <span className="text-sm font-semibold text-mu">Total Pembayaran</span>
+                          <span className="text-[18px] font-extrabold text-br">{formatRupiah(total)}</span>
                         </div>
                       </div>
 
                       <button
                         onClick={goToPayment}
-                        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white rounded-xl py-3 text-sm font-bold transition-colors shadow-sm shadow-primary/30"
+                        className="w-full flex items-center justify-center gap-2 bg-br hover:brightness-110 text-white rounded-[14px] py-3.5 text-sm font-bold transition-all shadow-[0_6px_14px_rgba(30,155,80,0.25)]"
                       >
-                        <ShoppingCart className="w-4 h-4" /> Lanjut Bayar
+                        <ShoppingCart className="w-4 h-4" /> Lanjut ke Pembayaran
                       </button>
                     </>
                   )}
                 </>
               ) : (
                 <>
-                  {/* ===== Layar Pembayaran ===== */}
-                  <div className="flex items-center gap-2 mb-4">
+                  {/* ================= LAYAR PEMBAYARAN ================= */}
+                  <div className="flex items-center gap-2 mb-4 pb-3 border-b border-ln">
                     <button
                       onClick={backToCart}
-                      className="p-1.5 -ml-1.5 text-muted hover:text-ink hover:bg-lavender/60 rounded-lg transition-colors"
+                      className="w-8 h-8 rounded-lg bg-bg border border-ln flex items-center justify-center text-ink hover:bg-so transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <h2 className="text-base font-bold text-ink">Pembayaran</h2>
+                    <h2 className="text-[15px] font-bold text-ink m-0">Metode Pembayaran</h2>
                   </div>
 
-                  <div className="bg-lavender/40 rounded-xl p-4 mb-4 text-center">
-                    <p className="text-xs text-muted mb-1">Total Belanja</p>
-                    <p className="text-2xl font-black text-ink">{formatRupiah(total)}</p>
+                  <div className="bg-bg border border-ln rounded-[14px] p-3.5 mb-4 text-center">
+                    <p className="text-xs text-mu mb-0.5 font-medium">Total Tagihan</p>
+                    <p className="text-[22px] font-extrabold text-ink">{formatRupiah(total)}</p>
                   </div>
 
-                  <p className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Metode Bayar</p>
+                  <p className="text-[12px] font-bold text-mu uppercase tracking-wider mb-2">Pilih Pembayaran</p>
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     {PAYMENT_OPTIONS.map((opt) => {
                       const Icon = opt.icon
@@ -458,10 +462,10 @@ export default function KasirPage() {
                             setPaymentMethod(opt.value)
                             setPaidAmountInput('')
                           }}
-                          className={`flex flex-col items-center gap-1.5 py-3 rounded-xl text-xs font-bold transition-all ${
+                          className={`flex flex-col items-center gap-1.5 py-3 rounded-[12px] text-[13px] font-bold border transition-all ${
                             active
-                              ? 'bg-primary text-white shadow-sm shadow-primary/30'
-                              : 'bg-lavender/50 text-muted hover:bg-lavender'
+                              ? 'bg-br text-white border-br shadow-sm'
+                              : 'bg-card text-ink border-ln hover:bg-so/50'
                           }`}
                         >
                           <Icon className="w-4 h-4" />
@@ -473,22 +477,22 @@ export default function KasirPage() {
 
                   {paymentMethod === 'cash' ? (
                     <>
-                      <p className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Uang Diterima</p>
+                      <p className="text-[12px] font-bold text-mu uppercase tracking-wider mb-2">Uang Diterima dari Pelanggan</p>
                       <input
                         ref={paidInputRef}
                         type="number"
                         min={0}
-                        placeholder="Masukkan jumlah uang tunai"
+                        placeholder="Masukkan nominal tunai"
                         value={paidAmountInput}
                         onChange={(e) => setPaidAmountInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter' && canConfirmPayment) handleCheckout() }}
-                        className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors mb-2"
+                        className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm font-bold text-ink outline-none focus:border-br transition-colors mb-2.5"
                       />
 
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="flex flex-wrap gap-1.5 mb-4">
                         <button
                           onClick={() => setPaidAmountInput(String(total))}
-                          className="px-3 py-1.5 bg-lavender/60 hover:bg-lavender text-ink text-xs font-bold rounded-lg transition-colors"
+                          className="px-3 py-1.5 bg-bg border border-ln hover:bg-so text-ink text-xs font-bold rounded-lg transition-colors"
                         >
                           Uang Pas
                         </button>
@@ -496,37 +500,37 @@ export default function KasirPage() {
                           <button
                             key={amt}
                             onClick={() => setPaidAmountInput(String(amt))}
-                            className="px-3 py-1.5 bg-lavender/60 hover:bg-lavender text-ink text-xs font-bold rounded-lg transition-colors"
+                            className="px-3 py-1.5 bg-bg border border-ln hover:bg-so text-ink text-xs font-bold rounded-lg transition-colors"
                           >
                             {formatRupiah(amt)}
                           </button>
                         ))}
                       </div>
 
-                      <div className={`rounded-xl p-4 mb-4 flex justify-between items-center ${
-                        paidAmountInput === '' ? 'bg-lavender/30' : changeAmount >= 0 ? 'bg-primary-light' : 'bg-red-50'
+                      <div className={`rounded-[14px] p-3.5 mb-4 flex justify-between items-center border ${
+                        paidAmountInput === '' ? 'bg-bg border-ln' : changeAmount >= 0 ? 'bg-so border-br/30' : 'bg-rs border-rd/30'
                       }`}>
-                        <span className={`text-sm font-medium ${paidAmountInput !== '' && changeAmount < 0 ? 'text-red-600' : 'text-muted'}`}>
+                        <span className={`text-xs font-bold ${paidAmountInput !== '' && changeAmount < 0 ? 'text-rd' : 'text-mu'}`}>
                           {paidAmountInput !== '' && changeAmount < 0 ? 'Uang kurang' : 'Kembalian'}
                         </span>
-                        <span className={`text-lg font-black ${
-                          paidAmountInput === '' ? 'text-muted' : changeAmount >= 0 ? 'text-primary' : 'text-red-600'
+                        <span className={`text-[15px] font-extrabold ${
+                          paidAmountInput === '' ? 'text-mu' : changeAmount >= 0 ? 'text-br' : 'text-rd'
                         }`}>
                           {paidAmountInput === '' ? '—' : formatRupiah(Math.abs(changeAmount))}
                         </span>
                       </div>
                     </>
                   ) : (
-                    <div className="bg-primary-light rounded-xl p-4 mb-4 flex items-center gap-2.5 text-sm text-ink">
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                      Pembayaran QRIS sejumlah tagihan penuh, tanpa kembalian.
+                    <div className="bg-so border border-br/30 rounded-[14px] p-3.5 mb-4 flex items-center gap-2.5 text-xs text-ink font-medium">
+                      <Check className="w-4 h-4 text-br shrink-0" />
+                      Pembayaran via QRIS sesuai total tagihan tanpa kembalian.
                     </div>
                   )}
 
                   <button
                     onClick={handleCheckout}
                     disabled={isCheckingOut || !canConfirmPayment}
-                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white rounded-xl py-3.5 text-sm font-bold transition-colors disabled:opacity-50 shadow-sm shadow-primary/30"
+                    className="w-full flex items-center justify-center gap-2 bg-br hover:brightness-110 text-white rounded-[14px] py-3.5 text-sm font-bold transition-all disabled:opacity-50 shadow-[0_6px_14px_rgba(30,155,80,0.25)]"
                   >
                     {isCheckingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     {isCheckingOut ? 'Memproses...' : 'Selesaikan & Bayar'}
@@ -539,12 +543,12 @@ export default function KasirPage() {
         </div>
       </div>
 
-      {/* Bar shortcut keyboard — cuma buat laptop/PC (ada tombol F1-F12), disembunyikan total di HP/tablet */}
-      <div className="hidden lg:block fixed bottom-0 inset-x-0 lg:pl-64 z-40 pointer-events-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
-          <div className="pointer-events-auto bg-ink text-white/90 rounded-xl shadow-lg px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] font-medium justify-center sm:justify-start">
+      {/* Shortcut Keyboard Desktop (Opsional PC) */}
+      <div className="hidden lg:block fixed bottom-0 inset-x-0 lg:pl-[248px] z-30 pointer-events-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+          <div className="pointer-events-auto bg-ink text-white/90 rounded-xl shadow-lg px-4 py-2 flex flex-wrap items-center gap-x-5 text-[11px] font-medium justify-center sm:justify-start">
             <span><kbd className="px-1.5 py-0.5 bg-white/15 rounded font-mono">F2</kbd> Cari Barang</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white/15 rounded font-mono">F3</kbd> Barcode Manual</span>
+            <span><kbd className="px-1.5 py-0.5 bg-white/15 rounded font-mono">F3</kbd> Scan Barcode</span>
             <span><kbd className="px-1.5 py-0.5 bg-white/15 rounded font-mono">F4</kbd> Kosongkan</span>
             <span><kbd className="px-1.5 py-0.5 bg-white/15 rounded font-mono">F9</kbd> Bayar</span>
             <span><kbd className="px-1.5 py-0.5 bg-white/15 rounded font-mono">Esc</kbd> Kembali</span>

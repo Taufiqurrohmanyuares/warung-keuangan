@@ -2,18 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900 antialiased;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+/* 1. Variabel Warna & Tema dari Prototype HTML */
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  
+  /* Palette Tema Terang */
+  --bg: #F3F7F4;       /* Background utama */
+  --card: #fff;        /* Background kartu/elemen */
+  --ink: #10261C;      /* Teks utama (gelap) */
+  --mu: #64806F;       /* Teks muted/sekunder */
+  --ln: #E1EBE4;       /* Garis/Border */
+  --br: #1E9B50;       /* Warna Utama (Brand/Hijau) */
+  --dk: #0F4C3A;       /* Hijau Gelap (Header/Gradien) */
+  --gd: #FDB827;       /* Emas/Kuning (Pengeluaran) */
+  --so: #E8F5EC;       /* Hijau sangat muda (Hover/Soft) */
+  --rd: #DC2626;       /* Merah (Peringatan/Negatif) */
+  --rs: #FEECEC;       /* Merah pudar (Background Peringatan) */
+  --am: #FFF6DD;       /* Kuning pudar (Warning/Tipis) */
+}
+
+/* Palette Tema Gelap (Otomatis menyesuaikan preferensi sistem) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A1711;
+    --card: #112219;
+    --ink: #EAF5EE;
+    --mu: #9DB8A9;
+    --ln: #1F3A2D;
+    --so: #173528;
+    --rs: #3A1B1B;
+    --am: #3A3114;
   }
 }
 
-/* Memastikan angka keuangan rata kanan / mudah dibaca selayaknya aplikasi kasir */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
+/* Palette Tema Gelap (Manual via tombol toggle) */
+:root[data-theme="dark"] {
+  --bg: #0A1711;
+  --card: #112219;
+  --ink: #EAF5EE;
+  --mu: #9DB8A9;
+  --ln: #1F3A2D;
+  --so: #173528;
+  --rs: #3A1B1B;
+  --am: #3A3114;
 }
 
+/* 2. Base Styles (Penerapan Font, Body, dan Reset Elemen) */
+@layer base {
+  html {
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+    height: 100%;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    font-size: 14px;
+    @apply antialiased; /* Dipertahankan dari file lama */
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  /* Standar gaya icon SVG dari prototype */
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+}
+
+/* 3. Utilitas Tambahan */
+@layer utilities {
+  /* Memastikan angka keuangan rata kanan / mudah dibaca selayaknya aplikasi kasir */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* 4. Pengaturan Khusus Print Struk (Dipertahankan dari file lama) */
 @media print {
   body * {
     visibility: hidden;

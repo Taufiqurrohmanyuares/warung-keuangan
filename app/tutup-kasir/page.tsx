@@ -1,14 +1,10 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-// Tambahkan di baris import paling atas:
 import { todayWIB } from '@/lib/date'
 import DashboardShell from '@/components/DashboardShell'
 import { Stempel, useStempel } from '@/components/Stempel'
-import {
-  Wallet, Banknote, QrCode, TrendingDown, Receipt, CheckCircle2,
-  AlertTriangle, RotateCcw, Loader2, Lock,
-} from 'lucide-react'
+import { CheckCircle2, AlertTriangle, RotateCcw, Loader2, Lock } from 'lucide-react'
 
 type Summary = {
   date: string
@@ -34,10 +30,6 @@ type Summary = {
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10)
 }
 
 function formatTanggal(dateStr: string) {
@@ -143,11 +135,13 @@ export default function TutupKasirPage() {
   if (loading || !summary) {
     return (
       <DashboardShell>
-        <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+        <div className="max-w-5xl mx-auto px-4 py-8 w-full">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-white/60 rounded-xl w-1/2" />
-            <div className="h-40 bg-white/60 rounded-2xl" />
-            <div className="h-64 bg-white/60 rounded-2xl" />
+            <div className="h-8 bg-card border border-ln rounded-[14px] w-1/3" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="h-72 bg-card border border-ln rounded-[22px]" />
+              <div className="h-72 bg-card border border-ln rounded-[22px]" />
+            </div>
           </div>
         </div>
       </DashboardShell>
@@ -159,190 +153,187 @@ export default function TutupKasirPage() {
   return (
     <DashboardShell>
       <Stempel visible={stempel.visible} label={stempel.label} />
-      <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+      <div className="max-w-5xl mx-auto w-full pb-16 lg:pb-10">
 
+        {/* ===================== HEADER ===================== */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Tutup Kasir</h1>
-          <p className="text-sm text-muted mt-1 capitalize">{formatTanggal(summary.date)}</p>
-        </div>
-
-        {/* ===== RINGKASAN OMZET HARI INI ===== */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white shadow-sm rounded-2xl p-4">
-            <div className="p-2 bg-primary-light rounded-lg w-fit mb-2"><Banknote className="w-4 h-4 text-primary" /></div>
-            <p className="text-xs text-muted mb-0.5">Tunai</p>
-            <p className="text-sm font-bold text-ink">{formatRupiah(summary.cash_sales)}</p>
-          </div>
-          <div className="bg-white shadow-sm rounded-2xl p-4">
-            <div className="p-2 bg-primary-light rounded-lg w-fit mb-2"><QrCode className="w-4 h-4 text-primary" /></div>
-            <p className="text-xs text-muted mb-0.5">QRIS</p>
-            <p className="text-sm font-bold text-ink">{formatRupiah(summary.qris_sales)}</p>
-          </div>
-          <div className="bg-white shadow-sm rounded-2xl p-4">
-            <div className="p-2 bg-red-50 rounded-lg w-fit mb-2"><TrendingDown className="w-4 h-4 text-red-600" /></div>
-            <p className="text-xs text-muted mb-0.5">Pengeluaran</p>
-            <p className="text-sm font-bold text-red-600">{formatRupiah(summary.cash_expenses)}</p>
-          </div>
-          <div className="bg-white shadow-sm rounded-2xl p-4">
-            <div className="p-2 bg-primary-light rounded-lg w-fit mb-2"><Receipt className="w-4 h-4 text-primary" /></div>
-            <p className="text-xs text-muted mb-0.5">Total Omzet</p>
-            <p className="text-sm font-bold text-ink">{formatRupiah(totalOmzet)}</p>
-          </div>
+          <h1 className="text-[26px] font-extrabold tracking-tight text-ink m-0">Tutup Kasir</h1>
+          <p className="text-mu mt-1 text-[14px] capitalize">{formatTanggal(summary.date)}</p>
         </div>
 
         {summary.already_closed && summary.closing ? (
-          /* ===== SUDAH DITUTUP: tampilkan hasil ===== */
-          <div className="bg-white shadow-sm rounded-2xl p-6">
-            <div className="flex items-center gap-2.5 mb-5">
-              <div className="p-2 bg-primary-light rounded-lg"><Lock className="w-4 h-4 text-primary" /></div>
+          /* ===================== KONDISI SUDAH DITUTUP ===================== */
+          <div className="bg-card border border-ln rounded-[22px] p-6 shadow-sm max-w-xl mx-auto">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-ln">
+              <div className="w-10 h-10 rounded-[12px] bg-so text-br flex items-center justify-center"><Lock className="w-5 h-5" /></div>
               <div>
-                <h2 className="text-base font-bold text-ink">Kasir Hari Ini Sudah Ditutup</h2>
-                <p className="text-xs text-muted">
-                  Ditutup jam {new Date(summary.closing.closed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                <h2 className="text-[17px] font-bold text-ink m-0">Kasir Hari Ini Sudah Ditutup</h2>
+                <p className="text-xs text-mu mt-0.5">
+                  Ditutup pukul {new Date(summary.closing.closed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2.5 text-sm mb-5">
+            <div className="space-y-3.5 text-sm mb-6">
               <div className="flex justify-between">
-                <span className="text-muted">Modal Kas Awal</span>
-                <span className="font-medium text-ink">{formatRupiah(summary.closing.opening_cash)}</span>
+                <span className="text-mu font-medium">Modal Kas Awal</span>
+                <span className="font-bold text-ink">{formatRupiah(summary.closing.opening_cash)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">+ Penjualan Tunai</span>
-                <span className="font-medium text-ink">{formatRupiah(summary.closing.cash_sales)}</span>
+                <span className="text-mu font-medium">+ Penjualan Tunai</span>
+                <span className="font-bold text-ink">{formatRupiah(summary.closing.cash_sales)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">- Pengeluaran</span>
-                <span className="font-medium text-ink">{formatRupiah(summary.closing.cash_expenses)}</span>
+                <span className="text-mu font-medium">- Pengeluaran</span>
+                <span className="font-bold text-rd">{formatRupiah(summary.closing.cash_expenses)}</span>
               </div>
-              <div className="flex justify-between border-t border-lavender pt-2.5">
-                <span className="text-muted font-medium">Kas Seharusnya</span>
-                <span className="font-bold text-ink">{formatRupiah(summary.closing.expected_cash)}</span>
+              <div className="flex justify-between border-t border-ln pt-3">
+                <span className="text-ink font-bold">Kas Seharusnya</span>
+                <span className="font-extrabold text-ink">{formatRupiah(summary.closing.expected_cash)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted font-medium">Kas Dihitung (fisik)</span>
-                <span className="font-bold text-ink">{formatRupiah(summary.closing.counted_cash)}</span>
+                <span className="text-ink font-bold">Kas Dihitung (Fisik)</span>
+                <span className="font-extrabold text-ink">{formatRupiah(summary.closing.counted_cash)}</span>
               </div>
             </div>
 
-            <div className={`rounded-xl p-4 flex items-center justify-between mb-5 ${
-              summary.closing.difference === 0 ? 'bg-primary-light' : 'bg-red-50'
+            <div className={`rounded-[14px] p-4 flex items-center justify-between mb-6 border ${
+              summary.closing.difference === 0 ? 'bg-so border-br/30' : 'bg-rs border-rd/30'
             }`}>
               <div className="flex items-center gap-2">
                 {summary.closing.difference === 0 ? (
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="w-4 h-4 text-br" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-red-600" />
+                  <AlertTriangle className="w-4 h-4 text-rd" />
                 )}
-                <span className={`text-sm font-medium ${summary.closing.difference === 0 ? 'text-ink' : 'text-red-700'}`}>
+                <span className={`text-sm font-bold ${summary.closing.difference === 0 ? 'text-ink' : 'text-rd'}`}>
                   {summary.closing.difference === 0 ? 'Pas, tidak ada selisih' : summary.closing.difference > 0 ? 'Kas Lebih' : 'Kas Kurang'}
                 </span>
               </div>
               {summary.closing.difference !== 0 && (
-                <span className="text-lg font-black text-red-600">
+                <span className="text-[16px] font-extrabold text-rd">
                   {formatRupiah(Math.abs(summary.closing.difference))}
                 </span>
               )}
             </div>
 
             {summary.closing.note && (
-              <div className="bg-lavender/40 rounded-xl p-4 mb-5">
-                <p className="text-xs font-bold text-muted uppercase tracking-wide mb-1">Catatan</p>
-                <p className="text-sm text-ink">{summary.closing.note}</p>
+              <div className="bg-bg border border-ln rounded-[14px] p-4 mb-6">
+                <p className="text-[11px] font-bold text-mu uppercase tracking-wider mb-1">Catatan Penutupan</p>
+                <p className="text-sm text-ink font-medium">{summary.closing.note}</p>
               </div>
             )}
 
             <button
               onClick={handleReopen}
               disabled={reopening}
-              className="w-full flex items-center justify-center gap-2 bg-lavender/60 hover:bg-lavender text-ink rounded-xl py-3 text-sm font-bold transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 bg-bg border border-ln hover:bg-so text-ink rounded-[14px] py-3.5 text-sm font-bold transition-all disabled:opacity-50"
             >
-              {reopening ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-              Buka Lagi (kalau salah input)
+              {reopening ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4 text-mu" />}
+              Buka Lagi (Koreksi Input)
             </button>
           </div>
         ) : (
-          /* ===== BELUM DITUTUP: form hitung kas ===== */
-          <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-2xl p-6 space-y-4">
-            <h2 className="text-base font-bold text-ink mb-1">Hitung Kas di Laci</h2>
-            <p className="text-xs text-muted mb-4">Isi modal awal kas dan hasil hitung fisik uang tunai sekarang.</p>
+          /* ===================== KONDISI BELUM DITUTUP (2 KOLOM SEPERTI REFERENSI) ===================== */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-            <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wide mb-1.5 block">Modal Kas Awal Hari Ini</label>
-              <input
-                type="number"
-                min={0}
-                value={openingCash}
-                onChange={(e) => setOpeningCash(e.target.value)}
-                className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
-              />
-              <p className="text-[11px] text-muted mt-1">Otomatis diisi dari sisa kas penutupan sebelumnya — boleh diubah kalau beda.</p>
+            {/* KOLOM KIRI: Ringkasan Hari Ini */}
+            <div className="bg-card border border-ln rounded-[22px] p-6 shadow-sm space-y-4">
+              <h2 className="text-[17px] font-extrabold text-ink m-0 pb-3 border-b border-ln">Ringkasan hari ini</h2>
+
+              <div className="space-y-4 pt-1">
+                <div className="flex justify-between items-center pb-3 border-b border-ln/60">
+                  <span className="text-sm font-medium text-ink">Tunai</span>
+                  <span className="text-sm font-extrabold text-ink">{formatRupiah(summary.cash_sales)}</span>
+                </div>
+
+                <div className="flex justify-between items-center pb-3 border-b border-ln/60">
+                  <span className="text-sm font-medium text-ink">QRIS</span>
+                  <span className="text-sm font-extrabold text-ink">{formatRupiah(summary.qris_sales)}</span>
+                </div>
+
+                <div className="flex justify-between items-center pb-3 border-b border-ln/60">
+                  <span className="text-sm font-medium text-ink">Pengeluaran</span>
+                  <span className="text-sm font-extrabold text-rd">-{formatRupiah(summary.cash_expenses)}</span>
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-[15px] font-bold text-ink">Total omzet</span>
+                  <span className="text-[20px] font-extrabold text-br">{formatRupiah(totalOmzet)}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-lavender/40 rounded-xl p-4 flex justify-between items-center">
-              <span className="text-sm font-medium text-muted">Kas Seharusnya di Laci</span>
-              <span className="text-lg font-black text-ink">{formatRupiah(expectedCash)}</span>
-            </div>
+            {/* KOLOM KANAN: Hitung Kas di Laci */}
+            <form onSubmit={handleSubmit} className="bg-card border border-ln rounded-[22px] p-6 shadow-sm space-y-5">
+              <h2 className="text-[17px] font-extrabold text-ink m-0 pb-3 border-b border-ln">Hitung kas di laci</h2>
 
-            <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wide mb-1.5 block">Uang Tunai Hasil Hitung Fisik</label>
-              <div className="relative">
-                <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 text-primary w-4 h-4" />
+              <div>
+                <label className="text-xs font-extrabold text-ink block mb-2">Modal kas awal</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={openingCash}
+                  onChange={(e) => setOpeningCash(e.target.value)}
+                  className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm font-bold text-ink outline-none focus:border-br transition-colors"
+                />
+                <p className="text-mu text-[11px] mt-1.5">Terisi dari penutupan kemarin</p>
+              </div>
+
+              {/* Kotak Hijau Kas Seharusnya */}
+              <div className="bg-so border border-br/30 rounded-[14px] p-4 flex justify-between items-center shadow-sm">
+                <span className="text-xs font-bold text-br">Kas seharusnya</span>
+                <span className="text-[18px] font-extrabold text-ink">{formatRupiah(expectedCash)}</span>
+              </div>
+
+              <div>
+                <label className="text-xs font-extrabold text-ink block mb-2">Uang tunai hasil hitung</label>
                 <input
                   type="number"
                   min={0}
                   autoFocus
-                  placeholder="Hitung uang di laci, lalu masukkan di sini"
+                  placeholder="Hitung uang di laci, lalu isi di sini"
                   value={countedCash}
                   onChange={(e) => setCountedCash(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors"
+                  className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm font-bold text-ink placeholder:text-mu/60 outline-none focus:border-br transition-colors"
                 />
               </div>
-            </div>
 
-            {difference !== null && (
-              <div className={`rounded-xl p-4 flex items-center justify-between ${
-                difference === 0 ? 'bg-primary-light' : 'bg-red-50'
-              }`}>
-                <div className="flex items-center gap-2">
-                  {difference === 0 ? (
-                    <CheckCircle2 className="w-4 h-4 text-primary" />
-                  ) : (
-                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                  )}
-                  <span className={`text-sm font-medium ${difference === 0 ? 'text-ink' : 'text-red-700'}`}>
-                    {difference === 0 ? 'Pas, tidak ada selisih' : difference > 0 ? 'Kas Lebih' : 'Kas Kurang'}
+              {difference !== null && difference !== 0 && (
+                <div className={`rounded-[14px] p-3.5 flex items-center justify-between border ${difference > 0 ? 'bg-so border-br/30' : 'bg-rs border-rd/30'}`}>
+                  <span className={`text-xs font-bold ${difference > 0 ? 'text-br' : 'text-rd'}`}>
+                    {difference > 0 ? 'Kas Lebih' : 'Kas Kurang'}
+                  </span>
+                  <span className={`text-[15px] font-extrabold ${difference > 0 ? 'text-br' : 'text-rd'}`}>
+                    {formatRupiah(Math.abs(difference))}
                   </span>
                 </div>
-                {difference !== 0 && (
-                  <span className="text-lg font-black text-red-600">{formatRupiah(Math.abs(difference))}</span>
-                )}
-              </div>
-            )}
+              )}
 
-            {difference !== null && difference !== 0 && (
-              <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wide mb-1.5 block">Catatan (kenapa selisih?)</label>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Misal: kembalian kurang pas, atau uang buat beli galon..."
-                  rows={2}
-                  className="w-full px-4 py-3 bg-lavender/40 border border-transparent rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white transition-colors resize-none"
-                />
-              </div>
-            )}
+              {difference !== null && difference !== 0 && (
+                <div>
+                  <label className="text-xs font-extrabold text-ink block mb-1.5">Catatan Selisih</label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Alasan selisih..."
+                    rows={2}
+                    className="w-full px-4 py-3 bg-card border border-ln rounded-[14px] text-sm text-ink outline-none focus:border-br transition-colors resize-none"
+                  />
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={submitting || countedCash === ''}
-              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white rounded-xl py-3.5 text-sm font-bold transition-colors disabled:opacity-50 shadow-sm shadow-primary/30"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-              {submitting ? 'Menyimpan...' : 'Tutup Kasir Sekarang'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={submitting || countedCash === ''}
+                className="w-full flex items-center justify-center gap-2 bg-br hover:brightness-110 text-white rounded-[14px] py-4 text-sm font-bold transition-all disabled:opacity-50 shadow-[0_6px_14px_rgba(30,155,80,0.25)]"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                {submitting ? 'Memproses...' : 'Tutup Kasir'}
+              </button>
+            </form>
+
+          </div>
         )}
       </div>
     </DashboardShell>
