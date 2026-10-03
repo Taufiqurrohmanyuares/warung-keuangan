@@ -224,7 +224,8 @@ export default function TransactionsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           
           {/* ===================== KOLOM KIRI: FORM INPUT ===================== */}
-          <div className="lg:col-span-1 sticky top-6">
+          {/* PERBAIKAN: Mengubah "sticky top-6" menjadi "lg:sticky lg:top-6" agar tidak ngambang di HP */}
+          <div className="lg:col-span-1 lg:sticky lg:top-6">
             <form onSubmit={handleSubmit(onSubmit as any)} className="bg-card border border-ln shadow-sm rounded-[18px] p-5">
               
               {/* Pilihan Tipe Transaksi */}
